@@ -18,6 +18,8 @@ public class ZabbixAPIConfiguration {
 	
 	private String zabbixapiurl;
 	
+	private String zabbixactionprefix;
+	
 	private String lasteventid;
 
     private int delay = 720;
@@ -84,6 +86,14 @@ public class ZabbixAPIConfiguration {
 
 	public void setLasteventid(String lasteventid) {
 		this.lasteventid = lasteventid;
+	}
+
+	public String getZabbixactionprefix() {
+		return zabbixactionprefix;
+	}
+
+	public void setZabbixactionprefix(String zabbixactionprefix) {
+		this.zabbixactionprefix = zabbixactionprefix;
 	}
 
 

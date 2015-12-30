@@ -91,6 +91,7 @@ public class Main {
 		    			+ "adaptername={{adaptername}}&"
 		    			+ "source={{source}}&"
 		    			+ "lasteventid={{lasteventid}}&"
+		    			+ "zabbixactionprefix={{zabbixactionprefix}}&"
 		    			+ "zabbixip={{zabbixip}}")
 
 				.choice()
