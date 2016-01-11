@@ -1153,7 +1153,7 @@ Possible values for trigger events:
 		
 		switch (status) {
         	case "1":  newstatus = "OPEN";break;
-        	case "0":  newstatus = "CLOSE";break;
+        	case "0":  newstatus = "CLOSED";break;
         	
         	//default:  newseverity = PersistentEventSeverity.INFO.name();break;
 
