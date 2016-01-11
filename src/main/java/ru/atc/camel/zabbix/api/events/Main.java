@@ -92,6 +92,7 @@ public class Main {
 		    			+ "source={{source}}&"
 		    			+ "lasteventid={{lasteventid}}&"
 		    			+ "zabbixactionprefix={{zabbixactionprefix}}&"
+		    			+ "zabbixtemplatepattern={{zabbixtemplatepattern}}&"
 		    			+ "zabbixip={{zabbixip}}")
 
 				.choice()

@@ -20,6 +20,9 @@ public class ZabbixAPIConfiguration {
 	
 	private String zabbixactionprefix;
 	
+	private String zabbixtemplatepattern;
+	
+	
 	private String lasteventid;
 
     private int delay = 720;
@@ -94,6 +97,14 @@ public class ZabbixAPIConfiguration {
 
 	public void setZabbixactionprefix(String zabbixactionprefix) {
 		this.zabbixactionprefix = zabbixactionprefix;
+	}
+
+	public String getZabbixtemplatepattern() {
+		return zabbixtemplatepattern;
+	}
+
+	public void setZabbixtemplatepattern(String zabbixtemplatepattern) {
+		this.zabbixtemplatepattern = zabbixtemplatepattern;
 	}
 
 
