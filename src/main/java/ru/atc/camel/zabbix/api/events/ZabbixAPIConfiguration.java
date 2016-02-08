@@ -22,6 +22,13 @@ public class ZabbixAPIConfiguration {
 	
 	private String zabbixtemplatepattern;
 	
+	private String groupCiPattern;
+	
+	private String groupSearchPattern;
+	
+	private String itemCiPattern;
+	
+	private String itemCiParentPattern;
 	
 	private String lasteventid;
 
@@ -105,6 +112,38 @@ public class ZabbixAPIConfiguration {
 
 	public void setZabbixtemplatepattern(String zabbixtemplatepattern) {
 		this.zabbixtemplatepattern = zabbixtemplatepattern;
+	}
+
+	public String getGroupCiPattern() {
+		return groupCiPattern;
+	}
+
+	public void setGroupCiPattern(String groupCiPattern) {
+		this.groupCiPattern = groupCiPattern;
+	}
+
+	public String getGroupSearchPattern() {
+		return groupSearchPattern;
+	}
+
+	public void setGroupSearchPattern(String groupSearchPattern) {
+		this.groupSearchPattern = groupSearchPattern;
+	}
+
+	public String getItemCiPattern() {
+		return itemCiPattern;
+	}
+
+	public void setItemCiPattern(String itemCiPattern) {
+		this.itemCiPattern = itemCiPattern;
+	}
+
+	public String getItemCiParentPattern() {
+		return itemCiParentPattern;
+	}
+
+	public void setItemCiParentPattern(String itemCiParentPattern) {
+		this.itemCiParentPattern = itemCiParentPattern;
 	}
 
 

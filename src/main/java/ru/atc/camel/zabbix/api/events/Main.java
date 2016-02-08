@@ -1,6 +1,7 @@
 package ru.atc.camel.zabbix.api.events;
 
 import java.io.File;
+import java.util.Objects;
 
 //import java.io.File;
 import javax.jms.ConnectionFactory;
@@ -32,13 +33,13 @@ public class Main {
 		logger.info("Press CTRL+C to terminate the JVM");
 			
 		if ( args.length == 2  ) {
-			activemq_port = (String)args[1];
-			activemq_ip = (String)args[0];
+			activemq_port = args[1];
+			activemq_ip = args[0];
 		}
 		
-		if (activemq_port == null || activemq_port == "" )
+		if (activemq_port == null || activemq_port.equals(""))
 			activemq_port = "61616";
-		if (activemq_ip == null || activemq_ip == "" )
+		if (activemq_ip == null || activemq_ip.equals("") )
 			activemq_ip = "172.20.19.195";
 		
 		logger.info("activemq_ip: " + activemq_ip);
@@ -46,7 +47,9 @@ public class Main {
 		
 		org.apache.camel.main.Main main = new org.apache.camel.main.Main();
 		main.enableHangupSupport();
-		
+
+		// TODO
+
 		main.addRouteBuilder(new RouteBuilder() {
 			
 			@Override
@@ -93,6 +96,10 @@ public class Main {
 		    			+ "lasteventid={{lasteventid}}&"
 		    			+ "zabbixactionprefix={{zabbixactionprefix}}&"
 		    			+ "zabbixtemplatepattern={{zabbixtemplatepattern}}&"
+		    			+ "groupCiPattern={{zabbix_group_ci_pattern}}&"
+		    			+ "groupSearchPattern={{zabbix_group_search_pattern}}&"
+		    			+ "itemCiPattern={{zabbix_item_ke_pattern}}&"
+		    			+ "itemCiParentPattern={{zabbix_item_ci_parent_pattern}}&"
 		    			+ "zabbixip={{zabbixip}}")
 
 				.choice()
