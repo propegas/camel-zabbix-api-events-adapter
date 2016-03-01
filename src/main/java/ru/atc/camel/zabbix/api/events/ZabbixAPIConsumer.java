@@ -1,29 +1,48 @@
 package ru.atc.camel.zabbix.api.events;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import io.github.hengyunabc.zabbix.api.DefaultZabbixApi;
+import io.github.hengyunabc.zabbix.api.Request;
+import io.github.hengyunabc.zabbix.api.RequestBuilder;
+import org.apache.camel.Exchange;
+import org.apache.camel.Processor;
+import org.apache.camel.impl.ScheduledPollConsumer;
+import org.apache.commons.lang.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import ru.at_consulting.itsm.device.Device;
+import ru.at_consulting.itsm.event.Event;
+
+import javax.xml.namespace.NamespaceContext;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
-//import java.security.KeyManagementException;
-//import java.security.KeyStore;
-//import java.security.KeyStoreException;
+import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+//import java.security.KeyManagementException;
+//import java.security.KeyStore;
+//import java.security.KeyStoreException;
 //import javax.net.ssl.SSLContext;
-
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
-import org.apache.camel.impl.ScheduledPollConsumer;
 //import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.lang.ArrayUtils;
 //import org.apache.commons.lang.CharSet;
 //import org.apache.http.HttpVersion;
-import org.apache.http.client.ClientProtocolException;
 //import org.apache.http.client.CookieStore;
 //import org.apache.http.client.config.RequestConfig;
 //import org.apache.http.client.methods.HttpPut;
@@ -35,32 +54,9 @@ import org.apache.http.client.ClientProtocolException;
 //import org.apache.http.impl.client.HttpClients;
 //import org.apache.http.params.CoreProtocolPNames;
 //import org.apache.http.ssl.SSLContextBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 //import com.google.gson.JsonObject;
-import io.github.hengyunabc.zabbix.api.DefaultZabbixApi;
-import io.github.hengyunabc.zabbix.api.Request;
-import io.github.hengyunabc.zabbix.api.RequestBuilder;
 //import ru.at_consulting.itsm.adapter.EventToObjectBean.PersistentEventSeverity;
-import ru.at_consulting.itsm.device.Device;
-import ru.at_consulting.itsm.event.Event;
 //import scala.xml.dtd.ParameterEntityDecl;
-
-import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
-import java.util.Iterator;
-
-import javax.xml.namespace.NamespaceContext;
-import javax.xml.parsers.*;
-import javax.xml.xpath.*;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 
 public class ZabbixAPIConsumer extends ScheduledPollConsumer {
@@ -69,18 +65,6 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
 	private static ZabbixAPIEndpoint endpoint;
 
-	public enum PersistentEventSeverity {
-		OK, INFO, WARNING, MINOR, MAJOR, CRITICAL;
-
-		public String value() {
-			return name();
-		}
-
-		public static PersistentEventSeverity fromValue(String v) {
-			return valueOf(v);
-		}
-	}
-
 	public ZabbixAPIConsumer(ZabbixAPIEndpoint endpoint, Processor processor) {
 		super(endpoint, processor);
 		ZabbixAPIConsumer.endpoint = endpoint;
@@ -88,6 +72,54 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		this.setTimeUnit(TimeUnit.MINUTES);
 		this.setInitialDelay(0);
 		this.setDelay(endpoint.getConfiguration().getDelay());
+	}
+
+	public static void genHeartbeatMessage(Exchange exchange) {
+
+		long timestamp = System.currentTimeMillis();
+		timestamp = timestamp / 1000;
+		// String textError = "Возникла ошибка при работе адаптера: ";
+		Event genevent = new Event();
+		genevent.setMessage("Сигнал HEARTBEAT от адаптера");
+		genevent.setEventCategory("ADAPTER");
+		genevent.setObject("HEARTBEAT");
+		genevent.setSeverity(PersistentEventSeverity.OK.name());
+		genevent.setTimestamp(timestamp);
+		genevent.setEventsource(String.format("%s", endpoint.getConfiguration().getAdaptername()));
+
+		logger.info(" **** Create Exchange for Heartbeat Message container");
+		// Exchange exchange = getEndpoint().createExchange();
+		exchange.getIn().setBody(genevent, Event.class);
+
+		exchange.getIn().setHeader("Timestamp", timestamp);
+		exchange.getIn().setHeader("queueName", "Heartbeats");
+		exchange.getIn().setHeader("Type", "Heartbeats");
+		exchange.getIn().setHeader("Source", endpoint.getConfiguration().getAdaptername());
+
+
+	}
+
+	private static String hashString(String message, String algorithm)
+			throws Exception {
+
+		try {
+			MessageDigest digest = MessageDigest.getInstance(algorithm);
+			byte[] hashedBytes = digest.digest(message.getBytes("UTF-8"));
+
+			return convertByteArrayToHexString(hashedBytes);
+		} catch (NoSuchAlgorithmException | UnsupportedEncodingException ex) {
+			throw new RuntimeException(
+					"Could not generate hash from String", ex);
+		}
+	}
+
+	private static String convertByteArrayToHexString(byte[] arrayBytes) {
+		StringBuffer stringBuffer = new StringBuffer();
+		for (byte arrayByte : arrayBytes) {
+			stringBuffer.append(Integer.toString((arrayByte & 0xff) + 0x100, 16)
+					.substring(1));
+		}
+		return stringBuffer.toString();
 	}
 
 	@Override
@@ -149,21 +181,21 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			boolean login = zabbixApi.login(username, password);
 			//System.err.println("login:" + login);
 			if (!login) {
-				
+
 				throw new RuntimeException("Failed to login to Zabbix API.");
 			}
 
 
 			logger.debug("Last Event ID: " + lasteventid);
 			// lastid = 0 (first execution)
-			
+
 			//List<Event> actualevents = null;
-			
+
 			if (lasteventid == 0) {
 				// Get all Actual Triggers (eventid) from Zabbix
 				logger.info("Try to get actual opened triggers");
 				String[] openTriggerEventIDs = getOpenTriggers(zabbixApi);
-				
+
 				// get last eventid from Zabbix
 				String lasteventidstr = getLastEventId(zabbixApi);
 				if (lasteventidstr != null){
@@ -182,14 +214,14 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 				String lasteventidstr = lasteventid + "";
 				String[] eventidsarr = { "" };
 				eventidsarr[0] = lasteventidstr;
-				
+
 				// get last eventid from Zabbix
 				String lasteventidstrnew = getLastEventId(zabbixApi);
 				if (lasteventidstrnew != null){
 					//lasteventid = Integer.parseInt(lasteventidstrnew);
 					endpoint.getConfiguration().setLasteventid(lasteventidstrnew);
 				}
-				
+
 				actualevents = getEventsByID(zabbixApi, eventidsarr, true);
 			}
 
@@ -227,14 +259,12 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			logger.info("Sended Events: " + listFinal.size());
 
 		} catch (NullPointerException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			logger.error(String.format("Error while get Events from API: %s ", e));
 			genErrorMessage(e.getMessage() + " " + e.toString());
 			//httpClient.close();
 			return 0;
 		} catch (Throwable e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			logger.error(String.format("Error while get Events from API: %s ", e));
 			genErrorMessage(e.getMessage() + " " + e.toString());
@@ -254,7 +284,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             // dataSource.close();
 			// return 0;
 		}
-		
+
 		String hash = null;
 		try {
 			hash = hashString(String.format("%s:%s", "1232131$!$ававяЙ", "bfbvl-lvlbv9595"), "SHA-1");
@@ -268,7 +298,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 	}
 
 	private String getLastEventId(DefaultZabbixApi zabbixApi) {
-		
+
 		Request getRequest;
 		JSONObject getResponse;
 		// JsonObject params = new JsonObject();
@@ -291,7 +321,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			ex.printStackTrace();
 			throw new RuntimeException("Failed create JSON request for get System LAst Event ID");
 		}
-		
+
 		JSONArray actions;
 		try {
 			getResponse = zabbixApi.call(getRequest);
@@ -301,7 +331,6 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			//System.err.println(actions);
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			throw new RuntimeException("Failed get JSON response result for all Open Triggers.");
 		}
@@ -313,7 +342,6 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
 	private List<Event> getEventsByID(DefaultZabbixApi zabbixApi, String[] openTriggerEventIDs, Boolean searchfornew)
                 throws Exception {
-		// TODO Auto-generated method stub
 
 		RequestBuilder getRequest_b;
 		Request getRequest;
@@ -332,16 +360,16 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 					.paramEntry("selectRelatedObject",
 							new String[] { "triggerid", "description", "status", "value", "priority" })
 					.paramEntry("sortfield", new String[] { "clock", "eventid" })
-					.paramEntry("sortorder", new String[] { "ASC" }).paramEntry("limit", "150");
+					.paramEntry("sortorder", new String[]{"ASC"}).paramEntry("limit", "500");
 					//.build();
-			
+
 			if (searchfornew){
 				getRequest_b = getRequest_b.paramEntry("eventid_from", openTriggerEventIDs[0]);
 			}
 			else {
 				getRequest_b = getRequest_b.paramEntry("eventids", openTriggerEventIDs);
 			}
-			
+
 			getRequest = getRequest_b.build();
 
 		} catch (Exception ex) {
@@ -358,7 +386,6 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			// System.err.println(openEvents);
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			throw new RuntimeException("Failed get JSON response result for Open Events by ID");
 		}
@@ -368,9 +395,9 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		// List<Device> listFinal = new ArrayList<Device>();
 		// String device_type = "host";
         logger.info("***** Finded Zabbix Events: " + openEvents.size());
-		
+
 		String[] systemActionIDs = getSystemActionsID(zabbixApi);
-		
+
 		// get all host from Zabbix for further usage for parent association
 		//JSONArray hosts = getAllHosts(zabbixApi);
 
@@ -387,7 +414,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			String eventid = event.getString("eventid");
 			String status = event.getString("value");
 			String timestamp = event.getString("clock");
-			
+
 			Event genevent = new Event();
 
 			logger.debug("*** Received JSON Event: " + event.toString());
@@ -397,8 +424,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			// JSONArray hostitems = event.getJSONArray("items");
 			String actionid;
 			String message;
-			
-			//try to find alerts in event 
+
+			//try to find alerts in event
 			loopalerts:
 			for (int x = 0; x < alerts.size(); x++) {
 				// logger.debug(f.toString());
@@ -406,25 +433,25 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 				JSONObject alert = alerts.getJSONObject(x);
 				actionid = alert.getString("actionid");
 				HashMap<String, Object> alertresult;
-				
+
 				// if pattern of Zabbix action name is appropriate
 				if (Arrays.asList(systemActionIDs).contains(actionid)){
 					message = alert.getString("message");
 					logger.debug("******** Received JSON Alert message: " + message);
-					
+
 					Pattern p = Pattern.compile(":echo '(.*)' > '.*",Pattern.DOTALL);
 					Matcher matcher = p.matcher(message);
-					
+
 					// if message's pattern slot in alert is appropriate
 					if (matcher.matches()) {
 						message = matcher.group(1);
 						logger.debug("******** Received JSON Alert XML message: " + message);
 						logger.debug("******** Trying to parse XML...  ");
-						
+
 						// try to parse XML of alert's message
 						alertresult = parseXMLtoObject(message);
-						
-						// Generate Event 
+
+						// Generate Event
 						if (alertresult != null){
 							logger.debug("**** Received well-formatted message.  ");
 							logger.debug("**** Trying to generate event for it...  ");
@@ -436,37 +463,37 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 							logger.debug("**** Received bad-formatted message.  ");
 							genevent = null;
 						}
-												
-						
+
+
 					}
-					
+
 					break loopalerts;
-					
-					
+
+
 				}
 				// if pattern of Zabbix action name is not appropriate
 				else {
-					
+
 				}
-	
-				
+
+
 			}
-			
+
 			// Add generated event to list
 			if (genevent != null ){
 				eventList.add(genevent);
 			}
-			
+
 			logger.debug("**** Received Total well-formatted Events: " + eventList.size());
 
 		}
 
 		return eventList;
 	}
-	
+
 	private Event genEventObj(DefaultZabbixApi zabbixApi, String hostname, String hostid, String hostdescription,
 			String eventid, String status, String timestamp, String objectid, HashMap<String, Object> alertresult) {
-		
+
 		Event event = new Event();
 		String triggername;
 		String value;
@@ -475,7 +502,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		String template;
 		//String itemid = "";
 		String itemname;
-		
+
 		try {
 			triggername = alertresult.get("triggername").toString();
 			value = alertresult.get("value").toString();
@@ -490,89 +517,88 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			e.printStackTrace();
 			return null;
 		}
-		
+
 		//
 		//logger.debug("Finded Zabbix hostgroup: " + hostgroup);
-		
+
 		String newhostname;
 		String ParentID = hostid;
 		String newobject = itemname;
 		newhostname = hostname;
-		
+
 		Pattern p = Pattern.compile("(.*)--(.*)");
 		Matcher matcher = p.matcher(hostname);
 		// Example: KRL-PHOBOSAU--MSSQL
 		// if pattern of hostname is appropriate as alias-name
-		
+
 		if (matcher.matches()) {
 
 			logger.debug("Finded Zabbix Host with Aliases: " + hostname);
 			// check aliases of zabbix host and get new name and Parent
 			//String[] checkreturn = checkEventHostAliases(hosts, hostname);
 			//ParentID = checkreturn[0];
-			
+
 			//hostreturn[0] = ParentID;
 			//hostreturn[1] = hostnameend;
 			//hostreturn[2] = hostnamebegin;
-			
+
 			newhostname = matcher.group(1);
 			//newobject = checkreturn[1];
 		}
-		// else 
+		// else
 		else {
 			logger.debug("Use hostid (as ciid) of hostname: " + hostname);
 			// Use hostid (as ciid) of hostname
 			ParentID = hostid;
 			//ParentID = checkreturn[0];
 		}
-		
-		
-			
+
+
 		event.setExternalid(eventid);
 		event.setStatus(setRightStatus(status));
 		event.setMessage(String.format("%s: %s", triggername, value));
-		
+
 		Long newtimstamp = (long) Integer.parseInt(timestamp);
 		event.setTimestamp(newtimstamp);
 
 		logger.debug("*** Received Zabbix Item : " + itemname);
-		
+
 		// zabbix_item_ke_pattern=\\[(.*)\\](.*)
 		String pattern = endpoint.getConfiguration().getItemCiPattern();
 		logger.debug("*** Zabbix Item CI Pattern: " + pattern);
-		
+
 		// zabbix_item_ci_parent_pattern=(.*)::(.*)
 		String zabbix_item_ci_parent_pattern = endpoint.getConfiguration().getItemCiParentPattern();
 		Pattern ciWithParentPattern = Pattern.compile(zabbix_item_ci_parent_pattern);
-		
-		// Example item as CI : 
+
+		// Example item as CI :
 		// [test CI item] bla-bla
 		p = Pattern.compile(pattern);
 		matcher = p.matcher(itemname);
-		
+
 		// if Item has CI pattern
 		if (matcher.matches()) {
-			
+
 			logger.debug("*** Finded Zabbix Item with Pattern as CI: " + itemname);
 			// save as ne CI name
 			itemname = matcher.group(1).toUpperCase();
 			//event.setHost(itemname);
 		    newobject = itemname;
-		    
+
 		    // CI 2 (CIITEM)::CI 3 (CIITEM2)
  			Matcher matcher2 = ciWithParentPattern.matcher(itemname);
  			if (matcher2.matches()) {
  				logger.debug("*** Finded Zabbix Item with Pattern with Parent: " + itemname);
  				itemname = matcher2.group(2).trim().toUpperCase();
- 				
+
  				//ciname = newitemname;
- 				
+
  				//parentitem = matcher2.group(1).toString().trim().toUpperCase();
  				logger.debug("*** itemname: " + itemname);
  				//logger.debug("*** parentitem: " + parentitem);
-			    
+
  			}
- 			
+
  			// get SHA-1 hash for hostname-item block for saving as ciid
 		    // Example:
 		    // KRL-PHOBOSAU--PHOBOS:TEST CI ITEM (TYPE)
@@ -591,30 +617,30 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		}
 		// if Item has no CI pattern
 		else {
-			
-			
+
+
 		}
-		
-		// Example Template name : 
+
+		// Example Template name :
 		// Template --SNMP Traps Nortel--
 		p = Pattern.compile(endpoint.getConfiguration().getZabbixtemplatepattern());
 		matcher = p.matcher(template);
 
 		// if Template name has Template pattern
 		if (matcher.matches()) {
-			
+
 			logger.debug("*** Zabbix Template Pattern: " + endpoint.getConfiguration().getZabbixtemplatepattern());
 			logger.debug("*** Finded Zabbix Template with Pattern: " + template);
 			// save as ne CI name
 			event.setEventCategory(matcher.group(1));
-			
+
 		}
 		// if Item has no CI pattern
 		else {
 
 
 		}
-		
+
 		event.setParametr(objectid);
 		event.setOrigin(hostname);
 		event.setCi(String.format("%s:%s", endpoint.getConfiguration().getSource(),ParentID));
@@ -622,16 +648,15 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		event.setObject(newobject);
 		event.setEventsource(String.format("%s", endpoint.getConfiguration().getSource()));
 		event.setSeverity(setRightSeverity(severity.toUpperCase()));
-		
+
 		logger.debug("**** Generated event: " + event.toString());
-		
+
 		return event;
 	}
 
-    private HashMap<String, Object> parseXMLtoObject(String xmlmessage) {
-		// TODO Auto-generated method stub
-		
-		 DocumentBuilderFactory domFactory = DocumentBuilderFactory
+	private HashMap<String, Object> parseXMLtoObject(String xmlmessage) {
+
+		DocumentBuilderFactory domFactory = DocumentBuilderFactory
 	                .newInstance();
 	        domFactory.setNamespaceAware(true);
 	        DocumentBuilder builder;
@@ -675,50 +700,50 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 	                return null;
 	            }
 	        });
-	        
-	        try {
+
+		try {
 	        	XPathExpression expr;
 	        	Object result;
 	        	//NodeList nodes;
-	        	
-	        	HashMap<String,Object> alertreturn= new HashMap<>(6);
-	        	
-	        	// <ns:severity>Information</ns:severity>
+
+			HashMap<String,Object> alertreturn= new HashMap<>(6);
+
+			// <ns:severity>Information</ns:severity>
 	            expr = xpath.compile("/ns:zabbixEvent/ns:severity");
 	            result = expr.evaluate(doc, XPathConstants.NODESET);
 	            String severity = ((NodeList) result).item(0).getTextContent();
 	            logger.debug("*** Received XML severity : " + severity);
 	            alertreturn.put("severity",severity);
-	            
-	            // <ns:value><![CDATA[16:53:06 2015/12/25 TYPE=NORTEL::CODE=AUD0000::SEVERITY=Info::DESCRIPTION=One pass made by audit. No errors detected. System software OK..Action: No ]]></ns:value>
+
+			// <ns:value><![CDATA[16:53:06 2015/12/25 TYPE=NORTEL::CODE=AUD0000::SEVERITY=Info::DESCRIPTION=One pass made by audit. No errors detected. System software OK..Action: No ]]></ns:value>
 	            expr = xpath.compile("/ns:zabbixEvent/ns:value");
 	            result = expr.evaluate(doc, XPathConstants.NODESET);
 	            String value = ((NodeList) result).item(0).getTextContent();
 	            logger.debug("*** Received XML value : " + value);
 	            alertreturn.put("value",value);
-	            
-	            // <ns:hostgroup>АТС </ns:hostgroup>
+
+			// <ns:hostgroup>АТС </ns:hostgroup>
 	            expr = xpath.compile("/ns:zabbixEvent/ns:hostgroup");
 	            result = expr.evaluate(doc, XPathConstants.NODESET);
 	            String hostgroup = ((NodeList) result).item(0).getTextContent();
 	            logger.debug("*** Received XML hostgroup : " + hostgroup);
 	            alertreturn.put("hostgroup",hostgroup);
-	            
-	            // <ns:template>SNMP Traps Nortel </ns:template>
+
+			// <ns:template>SNMP Traps Nortel </ns:template>
 	            expr = xpath.compile("/ns:zabbixEvent/ns:template");
 	            result = expr.evaluate(doc, XPathConstants.NODESET);
 	            String template = ((NodeList) result).item(0).getTextContent();
 	            logger.debug("*** Received XML template : " + template);
 	            alertreturn.put("template",template);
-	            
-	            // <ns:triggername><![CDATA[SNMP Info trap]]></ns:triggername>
+
+			// <ns:triggername><![CDATA[SNMP Info trap]]></ns:triggername>
 	            expr = xpath.compile("/ns:zabbixEvent/ns:triggername");
 	            result = expr.evaluate(doc, XPathConstants.NODESET);
 	            String triggername = ((NodeList) result).item(0).getTextContent();
 	            logger.debug("*** Received XML triggername : " + triggername);
 	            alertreturn.put("triggername",triggername);
-	            
-	            // <ns:itemid>23876</ns:itemid>
+
+			// <ns:itemid>23876</ns:itemid>
 	            try {
 					expr = xpath.compile("/ns:zabbixEvent/ns:itemid");
 					result = expr.evaluate(doc, XPathConstants.NODESET);
@@ -730,8 +755,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 					e.printStackTrace();
 					return null;
 				}
-	            
-	            // <ns:itemname><![CDATA[SNMP Trap SEVERITY=Info]]>
+
+			// <ns:itemname><![CDATA[SNMP Trap SEVERITY=Info]]>
 	            try {
 					expr = xpath.compile("/ns:zabbixEvent/ns:itemname");
 					result = expr.evaluate(doc, XPathConstants.NODESET);
@@ -743,25 +768,25 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 					e.printStackTrace();
 					return null;
 				}
-	           
-	            
-	            return alertreturn;
-	            
-	            // System.out.println(nodes.item(0).getNodeValue());
+
+
+			return alertreturn;
+
+			// System.out.println(nodes.item(0).getNodeValue());
 	        } catch (Exception E) {
 	            //System.out.println(E);
 	            E.printStackTrace();
 	            return null;
 	        }
-		
+
 	}
 
 	private String[] getSystemActionsID(DefaultZabbixApi zabbixApi){
-		
+
 		String prefix = endpoint.getConfiguration().getZabbixactionprefix();
 		//prefix = prefix . "*";
-		
-		
+
+
 		Request getRequest;
 		JSONObject getResponse;
 		// JsonObject params = new JsonObject();
@@ -772,7 +797,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			JSONObject search = new JSONObject();
 			// JSONObject output = new JSONObject();
 
-			search.put("name", new String[] { prefix + "*" });
+			search.put("name", new String[]{prefix + "*"});
 
 			filter.put("eventsource", 0);
 			// output.put("output", new String[] { "hostid", "name", "host" });
@@ -780,7 +805,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			getRequest = RequestBuilder.newBuilder().method("action.get")
 					.paramEntry("search", search)
 					.paramEntry("filter", filter)
-					.paramEntry("output",  new String[] { "actionid", "name" })
+					.paramEntry("output", new String[]{"actionid", "name"})
 					.paramEntry("searchWildcardsEnabled", 1)
 					.build();
 
@@ -789,7 +814,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			throw new RuntimeException("Failed create JSON request for get System Actions");
 		}
 
-		
+
 		JSONArray actions;
 		try {
 			getResponse = zabbixApi.call(getRequest);
@@ -804,7 +829,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			throw new RuntimeException("Failed get JSON response result for all Open Triggers.");
 		}
 
-		String[] actionids = new String[] {};
+		String[] actionids = new String[]{};
 
 		for (int i = 0; i < actions.size(); i++) {
 			// device_type = "group";
@@ -817,9 +842,9 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			// "lastEvent": {
 			// "eventid": "327723"
 			String actionid = action.getString("actionid");
-			
+
 			actionids = (String[]) ArrayUtils.add(actionids, actionid);
-			
+
 
 			logger.debug("*** Received JSON System ActionID: " + actionid);
 
@@ -829,12 +854,11 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		//logger.debug("*** Received JSON All Actual EventID: " + actionids.length);
 
 		return actionids;
-		
-		
+
+
 	}
-	
+
 	private String[] getOpenTriggers(DefaultZabbixApi zabbixApi) {
-		// TODO Auto-generated method stub
 
 		Request getRequest;
 		JSONObject getResponse;
@@ -874,7 +898,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			throw new RuntimeException("Failed get JSON response result for all Open Triggers.");
 		}
 
-		String[] eventids = new String[] {};
+		String[] eventids = new String[]{};
 
 		for (int i = 0; i < openTriggers.size(); i++) {
 			// device_type = "group";
@@ -893,11 +917,10 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
 				logger.debug("*** Received JSON EventID: " + eventid);
 				logger.debug("*** Received JSON Event Value: " + status);
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				logger.debug("*** No event for trigger: " + triggerid);
 			}
-			
+
 
 		}
 
@@ -946,21 +969,19 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
 			hosts = getResponse.getJSONArray("result");
 			System.err.println(hosts);
-			
+
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			throw new RuntimeException("Failed get JSON response result for all Hosts.");
 		}
-		
+
 		// listFinal.addAll(deviceList);
 		return hosts;
 	}
 */
-    /*
+	/*
 	private String[] checkEventHostAliases(JSONArray hosts, String hostname) {
-		// TODO Auto-generated method stub
 		// Example: KRL-PHOBOSAU--MSSQL
 		// String[] hostreturn = new String[] { "", "" } ;
 		Pattern p = Pattern.compile("(.*)--(.*)");
@@ -981,25 +1002,24 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			String name = host_a.getString("host");
 			if (name.equalsIgnoreCase(hostnamebegin)) {
 				ParentID =  host_a.getString("hostid");
-				
+
 			}
 		}
-		
+
 		String[] hostreturn = new String[] { "", "", "" } ;
-		
+
 		hostreturn[0] = ParentID;
 		hostreturn[1] = hostnameend;
 		hostreturn[2] = hostnamebegin;
-		
+
 		logger.info("*** New Zabbix Host ParentID: " + hostreturn[0]);
 		logger.info("*** New Zabbix Host Name: " + hostreturn[2]);
 		logger.info("*** New Zabbix Host Object: " + hostreturn[1]);
-		
+
 		return hostreturn;
 	}
 */
 	private void genErrorMessage(String message) {
-		// TODO Auto-generated method stub
 		long timestamp = System.currentTimeMillis();
 		timestamp = timestamp / 1000;
 		String textError = "Возникла ошибка при работе адаптера: ";
@@ -1030,36 +1050,11 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
 	}
 
-	public static void genHeartbeatMessage(Exchange exchange) {
-		// TODO Auto-generated method stub
-		long timestamp = System.currentTimeMillis();
-		timestamp = timestamp / 1000;
-		// String textError = "Возникла ошибка при работе адаптера: ";
-		Event genevent = new Event();
-		genevent.setMessage("Сигнал HEARTBEAT от адаптера");
-		genevent.setEventCategory("ADAPTER");
-		genevent.setObject("HEARTBEAT");
-		genevent.setSeverity(PersistentEventSeverity.OK.name());
-		genevent.setTimestamp(timestamp);
-		genevent.setEventsource(String.format("%s", endpoint.getConfiguration().getAdaptername()));
-
-		logger.info(" **** Create Exchange for Heartbeat Message container");
-		// Exchange exchange = getEndpoint().createExchange();
-		exchange.getIn().setBody(genevent, Event.class);
-
-		exchange.getIn().setHeader("Timestamp", timestamp);
-		exchange.getIn().setHeader("queueName", "Heartbeats");
-		exchange.getIn().setHeader("Type", "Heartbeats");
-		exchange.getIn().setHeader("Source", endpoint.getConfiguration().getAdaptername());
-
-
-	}
-
-    private String setRightSeverity(String severity)
+	private String setRightSeverity(String severity)
 	{
 		String newseverity;
 		/*
-		 * 
+		 *
 		Severity
  “NORMAL”
  “WARNING”
@@ -1067,17 +1062,16 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
  “MAJOR”
  “CRITICAL”
 		 */
-		
-		
-		
+
+
 		switch (severity) {
         	case "DISASTER":  newseverity = PersistentEventSeverity.CRITICAL.name();break;
         	case "HIGH":  newseverity = PersistentEventSeverity.MAJOR.name();break;
         	case "AVERAGE":  newseverity = PersistentEventSeverity.MINOR.name();break;
         	case "WARNING":  newseverity = PersistentEventSeverity.WARNING.name();break;
         	case "INFORMATION":  newseverity = PersistentEventSeverity.INFO.name();break;
-        	
-        	default:  newseverity = PersistentEventSeverity.INFO.name();break;
+
+			default:  newseverity = PersistentEventSeverity.INFO.name();break;
 
 		}
 		logger.debug("***************** severity: " + severity);
@@ -1089,50 +1083,38 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 	{
 		String newstatus = "";
 		/*
-		 * 
-State of the related object. 
+		 *
+State of the related object.
 
-Possible values for trigger events: 
-0 - OK; 
-1 - problem. 
+Possible values for trigger events:
+0 - OK;
+1 - problem.
 		 */
-		
-		
-		
+
+
 		switch (status) {
         	case "1":  newstatus = "OPEN";break;
         	case "0":  newstatus = "CLOSED";break;
-        	
-        	//default:  newseverity = PersistentEventSeverity.INFO.name();break;
+
+			//default:  newseverity = PersistentEventSeverity.INFO.name();break;
 
 		}
 		logger.debug("***************** status: " + status);
 		logger.debug("***************** newstatus: " + newstatus);
 		return newstatus;
 	}
-	
-    private static String hashString(String message, String algorithm)
-            throws Exception {
- 
-        try {
-            MessageDigest digest = MessageDigest.getInstance(algorithm);
-            byte[] hashedBytes = digest.digest(message.getBytes("UTF-8"));
- 
-            return convertByteArrayToHexString(hashedBytes);
-        } catch (NoSuchAlgorithmException | UnsupportedEncodingException ex) {
-            throw new RuntimeException(
-                    "Could not generate hash from String", ex);
-        }
-    }
- 
-    private static String convertByteArrayToHexString(byte[] arrayBytes) {
-        StringBuffer stringBuffer = new StringBuffer();
-        for (byte arrayByte : arrayBytes) {
-            stringBuffer.append(Integer.toString((arrayByte & 0xff) + 0x100, 16)
-                    .substring(1));
-        }
-        return stringBuffer.toString();
-    }
+
+	public enum PersistentEventSeverity {
+		OK, INFO, WARNING, MINOR, MAJOR, CRITICAL;
+
+		public static PersistentEventSeverity fromValue(String v) {
+			return valueOf(v);
+		}
+
+		public String value() {
+			return name();
+		}
+	}
 
 
 

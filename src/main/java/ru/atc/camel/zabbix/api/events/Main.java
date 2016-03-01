@@ -1,11 +1,5 @@
 package ru.atc.camel.zabbix.api.events;
 
-import java.io.File;
-import java.util.Objects;
-
-//import java.io.File;
-import javax.jms.ConnectionFactory;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -17,16 +11,20 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.processor.idempotent.FileIdempotentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import ru.at_consulting.itsm.device.Device;
+
+import javax.jms.ConnectionFactory;
+import java.io.File;
+
+//import java.io.File;
 //import org.apache.camel.processor.idempotent.FileIdempotentRepository;
-import ru.at_consulting.itsm.event.Event;
 
 public class Main {
 	
-	private static Logger logger = LoggerFactory.getLogger(Main.class);
 	public static String activemq_port = null;
 	public static String activemq_ip = null;
+	private static Logger logger = LoggerFactory.getLogger(Main.class);
+
 	public static void main(String[] args) throws Exception {
 		
 		logger.info("Starting Custom Apache Camel component example");
@@ -47,8 +45,6 @@ public class Main {
 		
 		org.apache.camel.main.Main main = new org.apache.camel.main.Main();
 		main.enableHangupSupport();
-
-		// TODO
 
 		main.addRouteBuilder(new RouteBuilder() {
 			
