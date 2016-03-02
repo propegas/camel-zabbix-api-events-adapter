@@ -407,7 +407,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			// logger.debug(f.toString());
 			// ZabbixAPIHost host = new ZabbixAPIHost();
 			JSONObject event = openEvents.getJSONObject(i);
-			String hostname = event.getJSONArray("hosts").getJSONObject(0).getString("host");
+			String hostHost = event.getJSONArray("hosts").getJSONObject(0).getString("host");
+			String hostName = event.getJSONArray("hosts").getJSONObject(0).getString("name");
 			String hostid = event.getJSONArray("hosts").getJSONObject(0).getString("hostid");
 			String hostdescription = event.getJSONArray("hosts").getJSONObject(0).getString("name");
 			String objectid = event.getString("objectid");
@@ -455,7 +456,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 						if (alertresult != null){
 							logger.debug("**** Received well-formatted message.  ");
 							logger.debug("**** Trying to generate event for it...  ");
-							genevent = genEventObj(zabbixApi, hostname, hostid, hostdescription, eventid,
+							genevent = genEventObj(zabbixApi, hostHost, hostid, hostName, eventid,
 									status, timestamp, objectid, alertresult);
 
 						}
@@ -491,8 +492,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		return eventList;
 	}
 
-	private Event genEventObj(DefaultZabbixApi zabbixApi, String hostname, String hostid, String hostdescription,
-			String eventid, String status, String timestamp, String objectid, HashMap<String, Object> alertresult) {
+	private Event genEventObj(DefaultZabbixApi zabbixApi, String hostHost, String hostid, String hostName,
+                              String eventid, String status, String timestamp, String objectid, HashMap<String, Object> alertresult) {
 
 		Event event = new Event();
 		String triggername;
@@ -524,18 +525,18 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		String newhostname;
 		String ParentID = hostid;
 		String newobject = itemname;
-		newhostname = hostname;
+		newhostname = hostHost;
 
 		Pattern p = Pattern.compile("(.*)--(.*)");
-		Matcher matcher = p.matcher(hostname);
+		Matcher matcher = p.matcher(hostHost);
 		// Example: KRL-PHOBOSAU--MSSQL
-		// if pattern of hostname is appropriate as alias-name
+		// if pattern of hostHost is appropriate as alias-name
 
 		if (matcher.matches()) {
 
-			logger.debug("Finded Zabbix Host with Aliases: " + hostname);
+			logger.debug("Finded Zabbix Host with Aliases: " + hostHost);
 			// check aliases of zabbix host and get new name and Parent
-			//String[] checkreturn = checkEventHostAliases(hosts, hostname);
+			//String[] checkreturn = checkEventHostAliases(hosts, hostHost);
 			//ParentID = checkreturn[0];
 
 			//hostreturn[0] = ParentID;
@@ -547,8 +548,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		}
 		// else
 		else {
-			logger.debug("Use hostid (as ciid) of hostname: " + hostname);
-			// Use hostid (as ciid) of hostname
+			logger.debug("Use hostid (as ciid) of hostHost: " + hostHost);
+			// Use hostid (as ciid) of hostHost
 			ParentID = hostid;
 			//ParentID = checkreturn[0];
 		}
@@ -599,14 +600,14 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
  			}
 
- 			// get SHA-1 hash for hostname-item block for saving as ciid
+ 			// get SHA-1 hash for hostHost-item block for saving as ciid
 		    // Example:
 		    // KRL-PHOBOSAU--PHOBOS:TEST CI ITEM (TYPE)
 		    logger.debug(String.format("*** Trying to generate hash for Item with Pattern: %s:%s",
-                        hostname, itemname));
+                    hostHost, itemname));
 		    String hash = null;
 			try {
-				hash = hashString(String.format("%s:%s", hostname, itemname), "SHA-1");
+				hash = hashString(String.format("%s:%s", hostHost, itemname), "SHA-1");
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -642,7 +643,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		}
 
 		event.setParametr(objectid);
-		event.setOrigin(hostname);
+		event.setOrigin(hostHost);
 		event.setCi(String.format("%s:%s", endpoint.getConfiguration().getSource(),ParentID));
 		event.setHost(newhostname);
 		event.setObject(newobject);
@@ -981,12 +982,12 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 	}
 */
 	/*
-	private String[] checkEventHostAliases(JSONArray hosts, String hostname) {
+	private String[] checkEventHostAliases(JSONArray hosts, String hostHost) {
 		// Example: KRL-PHOBOSAU--MSSQL
 		// String[] hostreturn = new String[] { "", "" } ;
 		Pattern p = Pattern.compile("(.*)--(.*)");
-		Matcher matcher = p.matcher(hostname.toUpperCase());
-		String hostnamebegin = hostname;
+		Matcher matcher = p.matcher(hostHost.toUpperCase());
+		String hostnamebegin = hostHost;
 		String hostnameend = "";
 		// String output = "";
 		if (matcher.matches()) {
