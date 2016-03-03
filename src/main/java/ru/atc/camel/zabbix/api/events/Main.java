@@ -96,6 +96,7 @@ public class Main {
 		    			+ "groupSearchPattern={{zabbix_group_search_pattern}}&"
 		    			+ "itemCiPattern={{zabbix_item_ke_pattern}}&"
 		    			+ "itemCiParentPattern={{zabbix_item_ci_parent_pattern}}&"
+						+ "maxEventsPerRequest={{maxEventsPerRequest}}&"
 		    			+ "zabbixip={{zabbixip}}")
 
 				.choice()

@@ -364,7 +364,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 					.paramEntry("selectRelatedObject",
 							new String[] { "triggerid", "description", "status", "value", "priority" })
 					.paramEntry("sortfield", new String[] { "clock", "eventid" })
-					.paramEntry("sortorder", new String[]{"ASC"}).paramEntry("limit", "500");
+					.paramEntry("sortorder", new String[]{"ASC"})
+                    .paramEntry("limit", endpoint.getConfiguration().getMaxEventsPerRequest());
 					//.build();
 
 			if (searchfornew){

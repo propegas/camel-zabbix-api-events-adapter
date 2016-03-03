@@ -32,7 +32,9 @@ public class ZabbixAPIConfiguration {
 	
 	private String lasteventid;
 
-    private int delay = 720;
+	private int maxEventsPerRequest = 500;
+
+    private int delay = 2; // in minutes
   
 	public int getDelay() {
 		return delay;
@@ -147,4 +149,11 @@ public class ZabbixAPIConfiguration {
 	}
 
 
+	public int getMaxEventsPerRequest() {
+		return maxEventsPerRequest;
+	}
+
+	public void setMaxEventsPerRequest(int maxEventsPerRequest) {
+		this.maxEventsPerRequest = maxEventsPerRequest;
+	}
 }
