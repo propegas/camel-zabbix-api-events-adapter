@@ -36,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static ru.atc.zabbix.general.CiItems.checkHostAliases;
+import static ru.atc.zabbix.general.CiItems.checkHostPattern;
+
 //import java.security.KeyManagementException;
 //import java.security.KeyStore;
 //import java.security.KeyStoreException;
@@ -285,6 +288,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			// return 0;
 		}
 
+        /*
 		String hash = null;
 		try {
 			hash = hashString(String.format("%s:%s", "1232131$!$ававяЙ", "bfbvl-lvlbv9595"), "SHA-1");
@@ -293,7 +297,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			e.printStackTrace();
 		}
 	    logger.debug("*** Generated Hash: " + hash );
-
+        */
 		return 1;
 	}
 
@@ -525,42 +529,29 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 		String newhostname;
 		String ParentID = hostid;
 		String newobject = itemname;
-		newhostname = hostHost;
 
-		Pattern p = Pattern.compile("(.*)--(.*)");
-		Matcher matcher = p.matcher(hostHost);
+        // Check host Aliases
 		// Example: KRL-PHOBOSAU--MSSQL
-		// if pattern of hostHost is appropriate as alias-name
-
-		if (matcher.matches()) {
-
-			logger.debug("Finded Zabbix Host with Aliases: " + hostHost);
-			// check aliases of zabbix host and get new name and Parent
-			//String[] checkreturn = checkEventHostAliases(hosts, hostHost);
-			//ParentID = checkreturn[0];
-
-			//hostreturn[0] = ParentID;
-			//hostreturn[1] = hostnameend;
-			//hostreturn[2] = hostnamebegin;
-
-			newhostname = matcher.group(1);
-			//newobject = checkreturn[1];
-		}
-		// else
-		else {
-			logger.debug("Use hostid (as ciid) of hostHost: " + hostHost);
+		// if pattern of hostHost or hostName is appropriate as alias-name
+		logger.debug("**** Check Zabbix hostHost and hostName for Aliases.");
+		newhostname = checkHostPattern(hostHost, hostName);
+		if (newhostname == null){
+			logger.debug("**** No Aliases found.");
+			newhostname = hostHost;
+			logger.debug("Use hostid (as ciid): " + hostid + " of hostHost: " + hostHost);
 			// Use hostid (as ciid) of hostHost
 			ParentID = hostid;
-			//ParentID = checkreturn[0];
 		}
-
+		else {
+            newhostname = checkHostAliases(null, hostHost, hostName)[1];
+		}
 
 		event.setExternalid(eventid);
 		event.setStatus(setRightStatus(status));
 		event.setMessage(String.format("%s: %s", triggername, value));
 
-		Long newtimstamp = (long) Integer.parseInt(timestamp);
-		event.setTimestamp(newtimstamp);
+		Long newTimestamp = (long) Integer.parseInt(timestamp);
+		event.setTimestamp(newTimestamp);
 
 		logger.debug("*** Received Zabbix Item : " + itemname);
 
@@ -574,8 +565,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
 		// Example item as CI :
 		// [test CI item] bla-bla
-		p = Pattern.compile(pattern);
-		matcher = p.matcher(itemname);
+        Pattern p = Pattern.compile(pattern);
+        Matcher matcher = p.matcher(itemname);
 
 		// if Item has CI pattern
 		if (matcher.matches()) {
@@ -868,7 +859,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 			// String host1 = "172.20.14.68";
 			// String host2 = "TGC1-ASODU2";
 			//JSONObject filter = new JSONObject();
-			// JSONObject output = new JSONObject();
+			// JSONObject output = new JSONObject(); c
 
 			//filter.put("filter", new int[] { 0, 1 });
 			// output.put("output", new String[] { "hostid", "name", "host" });
