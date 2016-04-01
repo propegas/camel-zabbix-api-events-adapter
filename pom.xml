@@ -3,15 +3,23 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ru.atc.monitoring</groupId>
     <artifactId>camel-zabbix-api-events-adapter</artifactId>
-    <version>0.6.2-SNAPSHOT</version>
+    <version>0.7-SNAPSHOT</version>
 
     <properties>
-        <camel-version>2.15.3</camel-version>
+        <camel-version>2.16.2</camel-version>
+        <activemq-version>5.13.2</activemq-version>
         <project.build.targetName>camelZabbix2.0</project.build.targetName>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <checkstyle.version>6.11.2</checkstyle.version>
+        <checkstyle.plugin.version>2.17</checkstyle.plugin.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>ru.atc.monitoring</groupId>
+            <artifactId>zabbix-api</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>ru.atc.zabbix.general</groupId>
             <artifactId>ciitem-api</artifactId>
@@ -28,7 +36,7 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.1.39</version>
+            <version>1.2.7</version>
         </dependency>
 
         <dependency>
@@ -86,12 +94,12 @@
         <dependency>
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-camel</artifactId>
-            <version>5.6.0</version>
+            <version>${activemq-version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-pool</artifactId>
-            <version>5.11.1</version>
+            <version>${activemq-version}</version>
         </dependency>
 
         <dependency>
@@ -103,19 +111,53 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.12</version>
+            <version>1.7.18</version>
         </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.12</version>
+            <version>1.7.18</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
         </dependency>
 
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${checkstyle.plugin.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>${checkstyle.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <configLocation>checkstyle.xml</configLocation>
+                    <suppressionsLocation>checkstyle_suppress.xml</suppressionsLocation>
+                    <consoleOutput>true</consoleOutput>
+                    <failsOnError>true</failsOnError>
+                    <failOnViolation>true</failOnViolation>
+                    <outputFileFormat>xml</outputFileFormat>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
             <!-- Required for HTML and Json annotation-based doc generation -->
             <!-- APT requires compiler compliance level 1.6 -->
@@ -195,7 +237,7 @@
                         </manifestEntries>
                     </archive>
 
-                    <finalName>${project.build.targetName}/${project.build.targetName}-${version}</finalName>
+                    <finalName>${project.build.targetName}/${project.build.targetName}-${project.version}</finalName>
                 </configuration>
             </plugin>
 

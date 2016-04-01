@@ -7,20 +7,20 @@ import org.apache.camel.impl.UriEndpointComponent;
 
 public class ZabbixAPIComponent extends UriEndpointComponent {
 
-	public ZabbixAPIComponent() {
-		super(ZabbixAPIEndpoint.class);
-	}
+    public ZabbixAPIComponent() {
+        super(ZabbixAPIEndpoint.class);
+    }
 
-	@Override
-	protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
-		
-		ZabbixAPIEndpoint endpoint = new ZabbixAPIEndpoint(uri, remaining, this);		
-		ZabbixAPIConfiguration configuration = new ZabbixAPIConfiguration();
-		
-		// use the built-in setProperties method to clean the camel parameters map
-		setProperties(configuration, parameters);
-		
-		endpoint.setConfiguration(configuration);		
-		return endpoint;
-	}
+    @Override
+    protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
+
+        ZabbixAPIEndpoint endpoint = new ZabbixAPIEndpoint(uri, remaining, this);
+        ZabbixAPIConfiguration configuration = new ZabbixAPIConfiguration();
+
+        // use the built-in setProperties method to clean the camel parameters map
+        setProperties(configuration, parameters);
+
+        endpoint.setConfiguration(configuration);
+        return endpoint;
+    }
 }

@@ -1,159 +1,161 @@
 package ru.atc.camel.zabbix.api.events;
 
 //import org.apache.camel.spi.UriParam;
+
 import org.apache.camel.spi.UriParams;
 
 @UriParams
-public class ZabbixAPIConfiguration {	
-    
-	private String zabbixip;
-	
-	private String username;
-	
-	private String adaptername;
-	
-	private String password;
-	
-	private String source;
-	
-	private String zabbixapiurl;
-	
-	private String zabbixactionprefix;
-	
-	private String zabbixtemplatepattern;
-	
-	private String groupCiPattern;
-	
-	private String groupSearchPattern;
-	
-	private String itemCiPattern;
-	
-	private String itemCiParentPattern;
-	
-	private String lasteventid;
+public class ZabbixAPIConfiguration {
 
-	private int maxEventsPerRequest = 500;
+    private static final int MAX_EVENTS_PER_REQUEST = 500;
+
+    private String zabbixip;
+
+    private String username;
+
+    private String adaptername;
+
+    private String password;
+
+    private String source;
+
+    private String zabbixapiurl;
+
+    private String zabbixactionprefix;
+
+    private String zabbixtemplatepattern;
+
+    private String groupCiPattern;
+
+    private String groupSearchPattern;
+
+    private String itemCiPattern;
+
+    private String itemCiParentPattern;
+
+    private String lasteventid;
+
+    private int maxEventsPerRequest = MAX_EVENTS_PER_REQUEST;
 
     private int delay = 2; // in minutes
-  
-	public int getDelay() {
-		return delay;
-	}
 
-	public void setDelay(int delay) {
-		this.delay = delay;
-	}
+    public int getDelay() {
+        return delay;
+    }
 
-	public String getZabbixip() {
-		return zabbixip;
-	}
+    public void setDelay(int delay) {
+        this.delay = delay;
+    }
 
-	public void setZabbixip(String zabbixip) {
-		this.zabbixip = zabbixip;
-	}
+    public String getZabbixip() {
+        return zabbixip;
+    }
 
-	public String getUsername() {
-		return username;
-	}
+    public void setZabbixip(String zabbixip) {
+        this.zabbixip = zabbixip;
+    }
 
-	public void setUsername(String username) {
-		this.username = username;
-	}
+    public String getUsername() {
+        return username;
+    }
 
-	public String getAdaptername() {
-		return adaptername;
-	}
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-	public void setAdaptername(String adaptername) {
-		this.adaptername = adaptername;
-	}
+    public String getAdaptername() {
+        return adaptername;
+    }
 
-	public String getPassword() {
-		return password;
-	}
+    public void setAdaptername(String adaptername) {
+        this.adaptername = adaptername;
+    }
 
-	public void setPassword(String password) {
-		this.password = password;
-	}
+    public String getPassword() {
+        return password;
+    }
 
-	public String getSource() {
-		return source;
-	}
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
-	public void setSource(String source) {
-		this.source = source;
-	}
+    public String getSource() {
+        return source;
+    }
 
-	public String getZabbixapiurl() {
-		return zabbixapiurl;
-	}
+    public void setSource(String source) {
+        this.source = source;
+    }
 
-	public void setZabbixapiurl(String zabbixapiurl) {
-		this.zabbixapiurl = zabbixapiurl;
-	}
+    public String getZabbixapiurl() {
+        return zabbixapiurl;
+    }
 
-	public String getLasteventid() {
-		return lasteventid;
-	}
+    public void setZabbixapiurl(String zabbixapiurl) {
+        this.zabbixapiurl = zabbixapiurl;
+    }
 
-	public void setLasteventid(String lasteventid) {
-		this.lasteventid = lasteventid;
-	}
+    public String getLasteventid() {
+        return lasteventid;
+    }
 
-	public String getZabbixactionprefix() {
-		return zabbixactionprefix;
-	}
+    public void setLasteventid(String lasteventid) {
+        this.lasteventid = lasteventid;
+    }
 
-	public void setZabbixactionprefix(String zabbixactionprefix) {
-		this.zabbixactionprefix = zabbixactionprefix;
-	}
+    public String getZabbixactionprefix() {
+        return zabbixactionprefix;
+    }
 
-	public String getZabbixtemplatepattern() {
-		return zabbixtemplatepattern;
-	}
+    public void setZabbixactionprefix(String zabbixactionprefix) {
+        this.zabbixactionprefix = zabbixactionprefix;
+    }
 
-	public void setZabbixtemplatepattern(String zabbixtemplatepattern) {
-		this.zabbixtemplatepattern = zabbixtemplatepattern;
-	}
+    public String getZabbixtemplatepattern() {
+        return zabbixtemplatepattern;
+    }
 
-	public String getGroupCiPattern() {
-		return groupCiPattern;
-	}
+    public void setZabbixtemplatepattern(String zabbixtemplatepattern) {
+        this.zabbixtemplatepattern = zabbixtemplatepattern;
+    }
 
-	public void setGroupCiPattern(String groupCiPattern) {
-		this.groupCiPattern = groupCiPattern;
-	}
+    public String getGroupCiPattern() {
+        return groupCiPattern;
+    }
 
-	public String getGroupSearchPattern() {
-		return groupSearchPattern;
-	}
+    public void setGroupCiPattern(String groupCiPattern) {
+        this.groupCiPattern = groupCiPattern;
+    }
 
-	public void setGroupSearchPattern(String groupSearchPattern) {
-		this.groupSearchPattern = groupSearchPattern;
-	}
+    public String getGroupSearchPattern() {
+        return groupSearchPattern;
+    }
 
-	public String getItemCiPattern() {
-		return itemCiPattern;
-	}
+    public void setGroupSearchPattern(String groupSearchPattern) {
+        this.groupSearchPattern = groupSearchPattern;
+    }
 
-	public void setItemCiPattern(String itemCiPattern) {
-		this.itemCiPattern = itemCiPattern;
-	}
+    public String getItemCiPattern() {
+        return itemCiPattern;
+    }
 
-	public String getItemCiParentPattern() {
-		return itemCiParentPattern;
-	}
+    public void setItemCiPattern(String itemCiPattern) {
+        this.itemCiPattern = itemCiPattern;
+    }
 
-	public void setItemCiParentPattern(String itemCiParentPattern) {
-		this.itemCiParentPattern = itemCiParentPattern;
-	}
+    public String getItemCiParentPattern() {
+        return itemCiParentPattern;
+    }
 
+    public void setItemCiParentPattern(String itemCiParentPattern) {
+        this.itemCiParentPattern = itemCiParentPattern;
+    }
 
-	public int getMaxEventsPerRequest() {
-		return maxEventsPerRequest;
-	}
+    public int getMaxEventsPerRequest() {
+        return maxEventsPerRequest;
+    }
 
-	public void setMaxEventsPerRequest(int maxEventsPerRequest) {
-		this.maxEventsPerRequest = maxEventsPerRequest;
-	}
+    public void setMaxEventsPerRequest(int maxEventsPerRequest) {
+        this.maxEventsPerRequest = maxEventsPerRequest;
+    }
 }
