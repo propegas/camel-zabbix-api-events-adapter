@@ -649,7 +649,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             @Override
             public String getNamespaceURI(String arg0) {
                 if ("ns".equals(arg0)) {
-                    return "http://skuf.gosuslugi.ru/mon/";
+                    //return "http://skuf.gosuslugi.ru/mon/";
+                    return endpoint.getConfiguration().getZabbixActionXmlNs();
                 }
                 return null;
             }

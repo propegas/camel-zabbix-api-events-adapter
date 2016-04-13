@@ -54,7 +54,7 @@ public final class Main {
         logger.info("activemq_port: " + activemq_port);
 
         org.apache.camel.main.Main main = new org.apache.camel.main.Main();
-        main.enableHangupSupport();
+        //main.enableHangupSupport();
 
         main.addRouteBuilder(new RouteBuilder() {
 
@@ -103,6 +103,7 @@ public final class Main {
                         .append("source={{source}}&")
                         .append("lasteventid={{lasteventid}}&")
                         .append("zabbixactionprefix={{zabbixactionprefix}}&")
+                        .append("zabbixActionXmlNs={{zabbixactionxmlns}}&")
                         .append("zabbixtemplatepattern={{zabbixtemplatepattern}}&")
                         .append("groupCiPattern={{zabbix_group_ci_pattern}}&")
                         .append("groupSearchPattern={{zabbix_group_search_pattern}}&")

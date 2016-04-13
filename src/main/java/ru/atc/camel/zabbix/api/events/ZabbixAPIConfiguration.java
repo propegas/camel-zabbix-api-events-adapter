@@ -23,6 +23,8 @@ public class ZabbixAPIConfiguration {
 
     private String zabbixactionprefix;
 
+    private String zabbixActionXmlNs;
+
     private String zabbixtemplatepattern;
 
     private String groupCiPattern;
@@ -157,5 +159,13 @@ public class ZabbixAPIConfiguration {
 
     public void setMaxEventsPerRequest(int maxEventsPerRequest) {
         this.maxEventsPerRequest = maxEventsPerRequest;
+    }
+
+    public String getZabbixActionXmlNs() {
+        return zabbixActionXmlNs;
+    }
+
+    public void setZabbixActionXmlNs(String zabbixActionXmlNs) {
+        this.zabbixActionXmlNs = zabbixActionXmlNs;
     }
 }

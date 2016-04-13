@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<configuration version="2.0">
+    <rule id="1">
+        <input>
+            <message><![CDATA[/^.*Event: Login, Info: SNMP login attempt via.*$/gs]]></message>
+        </input>
+        <output>
+            <status>CLOSED</status>>
+        </output>
+    </rule>
+
+</configuration>
