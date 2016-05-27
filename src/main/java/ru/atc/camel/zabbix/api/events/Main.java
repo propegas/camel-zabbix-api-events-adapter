@@ -54,7 +54,7 @@ public final class Main {
         logger.info("activemq_port: " + activemq_port);
 
         org.apache.camel.main.Main main = new org.apache.camel.main.Main();
-        //main.enableHangupSupport();
+        main.enableHangupSupport();
 
         main.addRouteBuilder(new RouteBuilder() {
 
