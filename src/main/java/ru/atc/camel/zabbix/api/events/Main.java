@@ -2,6 +2,7 @@ package ru.atc.camel.zabbix.api.events;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.camel.Exchange;
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.jms.JmsComponent;
@@ -16,11 +17,6 @@ import ru.at_consulting.itsm.event.Event;
 import javax.jms.ConnectionFactory;
 import java.io.File;
 
-//import ru.at_consulting.itsm.device.Device;
-
-//import java.io.File;
-//import org.apache.camel.processor.idempotent.FileIdempotentRepository;
-
 public final class Main {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -29,7 +25,6 @@ public final class Main {
 
     private static String activemq_port;
     private static String activemq_ip;
-    //private static String source;
 
     private Main() {
 
@@ -54,7 +49,6 @@ public final class Main {
         logger.info("activemq_port: " + activemq_port);
 
         org.apache.camel.main.Main main = new org.apache.camel.main.Main();
-        main.enableHangupSupport();
 
         main.addRouteBuilder(new RouteBuilder() {
 
@@ -64,11 +58,9 @@ public final class Main {
                 JsonDataFormat myJson = new JsonDataFormat();
                 myJson.setPrettyPrint(true);
                 myJson.setLibrary(JsonLibrary.Jackson);
+                //myJson.setJsonView(Event.class);
                 myJson.setAllowJmsType(true);
                 myJson.setUnmarshalType(Event.class);
-                //myJson.setJsonView(Event.class);
-
-                //myJson.setPrettyPrint(true);
 
                 PropertiesComponent properties = new PropertiesComponent();
                 properties.setLocation("classpath:zabbixapi.properties");
@@ -85,14 +77,15 @@ public final class Main {
                 // Heartbeats
                 from("timer://foo?period={{heartbeatsdelay}}")
                         .process(new Processor() {
+                            @Override
                             public void process(Exchange exchange) throws Exception {
                                 ZabbixAPIConsumer.genHeartbeatMessage(exchange);
                             }
                         })
-                        //.bean(WsdlNNMConsumer.class, "genHeartbeatMessage", exchange)
                         .marshal(myJson)
                         .to("activemq:{{heartbeatsqueue}}")
-                        .log("*** Heartbeat: ${id}");
+                        .log("*** Heartbeat: ${id}")
+                        .log(LoggingLevel.DEBUG, "***HEARTBEAT BODY: ${in.body}");
 
                 from(new StringBuilder().append("zabbixapi://events?")
                         .append("delay={{delay}}&")
@@ -109,6 +102,7 @@ public final class Main {
                         .append("groupSearchPattern={{zabbix_group_search_pattern}}&")
                         .append("itemCiPattern={{zabbix_item_ke_pattern}}&")
                         .append("itemCiParentPattern={{zabbix_item_ci_parent_pattern}}&")
+                        .append("itemCiTypePattern={{zabbix_item_ci_type_pattern}}&")
                         .append("maxEventsPerRequest={{maxEventsPerRequest}}&")
                         .append("zabbixip={{zabbixip}}")
                         .toString())
@@ -117,11 +111,12 @@ public final class Main {
                         .when(header("Type").isEqualTo("Error"))
                         .marshal(myJson)
                         .to("activemq:{{eventsqueue}}")
-                        .log("Error: ${id} ${header.EventUniqId}")
+                        .log("Error: ${id} ${header.EventUniqueId}")
+                        .log(LoggingLevel.DEBUG, "*** NEW ERROR BODY: ${in.body}")
 
                         .otherwise()
                         .idempotentConsumer(
-                                header("EventUniqId"),
+                                header("EventUniqueId"),
                                 FileIdempotentRepository.fileIdempotentRepository(
                                         cachefile, CACHE_SIZE, MAX_FILE_SIZE
                                 )
@@ -129,7 +124,8 @@ public final class Main {
 
                         .marshal(myJson)
                         .to("activemq:{{eventsqueue}}")
-                        .log("*** NEW EVENT: ${id} ${header.EventIdAndStatus}");
+                        .log("*** NEW EVENT: ${id} ${header.EventUniqueId}")
+                        .log(LoggingLevel.DEBUG, "*** NEW EVENT BODY: ${in.body}");
             }
         });
 

@@ -35,6 +35,8 @@ public class ZabbixAPIConfiguration {
 
     private String itemCiParentPattern;
 
+    private String itemCiTypePattern;
+
     private String lasteventid;
 
     private int maxEventsPerRequest = MAX_EVENTS_PER_REQUEST;
@@ -167,5 +169,13 @@ public class ZabbixAPIConfiguration {
 
     public void setZabbixActionXmlNs(String zabbixActionXmlNs) {
         this.zabbixActionXmlNs = zabbixActionXmlNs;
+    }
+
+    public String getItemCiTypePattern() {
+        return itemCiTypePattern;
+    }
+
+    public void setItemCiTypePattern(String itemCiTypePattern) {
+        this.itemCiTypePattern = itemCiTypePattern;
     }
 }

@@ -34,20 +34,18 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.io.StringReader;
-
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.HashMap;
 import java.util.Iterator;
-
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static ru.atc.zabbix.general.CiItems.checkHostAliases;
 import static ru.atc.zabbix.general.CiItems.checkHostPattern;
-import static ru.atc.zabbix.general.HashGenerator.hashString;
+import static ru.atc.zabbix.general.CiItems.checkItemForCi;
 
 public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
@@ -230,7 +228,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
             Exchange exchange = getEndpoint().createExchange();
             exchange.getIn().setBody(aListFinal, Event.class);
-            exchange.getIn().setHeader("EventUniqId", key);
+            exchange.getIn().setHeader("EventUniqueId", key);
 
             exchange.getIn().setHeader("queueName", "Events");
 
@@ -424,100 +422,75 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         //CHECKSTYLE:OFF
 
         Event event = new Event();
-        String triggername;
+        String triggerName;
         String value;
         String severity;
         String template;
-        String itemname;
+        String itemName;
 
         try {
-            triggername = alertresult.get("triggername").toString();
+            triggerName = alertresult.get("triggername").toString();
             value = alertresult.get("value").toString();
             severity = alertresult.get("severity").toString();
             template = alertresult.get("template").toString();
-            itemname = alertresult.get("itemname").toString();
+            itemName = alertresult.get("itemname").toString();
         } catch (Exception e) {
             logger.error(String.format("General Error while get Events from API: %s ", e));
             return null;
         }
 
-        String newhostname;
-        String parentID = hostid;
-        String newobject = itemname;
+        String fullHostNameWithAlias;
+        String shortHostNameWithoutAlias;
+        String ciId = hostid;
+        String newObjectName = itemName;
 
         // Check host Aliases
         // Example: KRL-PHOBOSAU--MSSQL
         // if pattern of hostHost or hostName is appropriate as alias-name
         logger.debug("**** Check Zabbix hostHost and hostName for Aliases.");
-        newhostname = checkHostPattern(hostHost, hostName);
-        if (newhostname == null) {
+        fullHostNameWithAlias = checkHostPattern(hostHost, hostName);
+        if (fullHostNameWithAlias == null) {
             logger.debug("**** No Aliases found.");
-            newhostname = hostHost;
+            shortHostNameWithoutAlias = fullHostNameWithAlias = hostHost;
             logger.debug("Use hostid (as ciid): " + hostid + " of hostHost: " + hostHost);
             // Use hostid (as ciid) of hostHost
-            parentID = hostid;
+            ciId = hostid;
         } else {
-            newhostname = checkHostAliases(null, hostHost, hostName)[1];
+            fullHostNameWithAlias = checkHostAliases(null, hostHost, hostName)[1];
+            shortHostNameWithoutAlias = checkHostAliases(null, hostHost, hostName)[2];
         }
 
         event.setExternalid(eventId);
         event.setStatus(setRightStatus(status));
-        event.setMessage(String.format("%s: %s", triggername, value));
+        event.setMessage(String.format("%s: %s", triggerName, value));
 
         Long newTimestamp = (long) Integer.parseInt(timestamp);
         event.setTimestamp(newTimestamp);
 
-        logger.debug("*** Received Zabbix Item : " + itemname);
+        logger.debug("*** Received Zabbix Item : " + itemName);
 
         // zabbix_item_ke_pattern=\\[(.*)\\](.*)
         String pattern = endpoint.getConfiguration().getItemCiPattern();
         logger.debug("*** Zabbix Item CI Pattern: " + pattern);
 
         // zabbixItemCiParentPattern=(.*)::(.*)
-        String zabbixItemCiParentPattern = endpoint.getConfiguration().getItemCiParentPattern();
-        Pattern ciWithParentPattern = Pattern.compile(zabbixItemCiParentPattern);
-
-        // Example item as CI :
-        // [test CI item] bla-bla
-        Pattern p = Pattern.compile(pattern);
-        Matcher matcher = p.matcher(itemname);
-
         // if Item has CI pattern
-        if (matcher.matches()) {
+        // get hash (ciid) and parsed name for CI item
 
-            logger.debug("*** Finded Zabbix Item with Pattern as CI: " + itemname);
-            // save as ne CI name
-            itemname = matcher.group(1).toUpperCase();
-            newobject = itemname;
-
-            // CI 2 (CIITEM)::CI 3 (CIITEM2)
-            Matcher matcher2 = ciWithParentPattern.matcher(itemname);
-            if (matcher2.matches()) {
-                logger.debug("*** Finded Zabbix Item with Pattern with Parent: " + itemname);
-                itemname = matcher2.group(2).trim().toUpperCase();
-
-                logger.debug("*** itemname: " + itemname);
-            }
-
-            // get SHA-1 hash for hostHost-item block for saving as ciid
-            // Example:
-            // KRL-PHOBOSAU--PHOBOS:TEST CI ITEM (TYPE)
-            logger.debug(String.format("*** Trying to generate hash for Item with Pattern: %s:%s",
-                    hostHost, itemname));
-            String hash = null;
-            try {
-                hash = hashString(String.format("%s:%s", hostHost, itemname), "SHA-1");
-            } catch (Exception e) {
-                logger.error(String.format("General Error while create hash: %s ", e));
-            }
-            logger.debug("*** Generated Hash: " + hash);
-            parentID = hash;
+        String[] returnCiArray = checkItemForCi(itemName, hostid, fullHostNameWithAlias,
+                endpoint.getConfiguration().getItemCiPattern(),
+                endpoint.getConfiguration().getItemCiParentPattern(),
+                endpoint.getConfiguration().getItemCiTypePattern());
+        if (!returnCiArray[0].isEmpty()) {
+            ciId = returnCiArray[0];
+            itemName = returnCiArray[1].toUpperCase();
+            newObjectName = itemName;
         }
 
         // Example Template name :
         // Template --SNMP Traps Nortel--
-        p = Pattern.compile(endpoint.getConfiguration().getZabbixtemplatepattern());
-        matcher = p.matcher(template);
+        Pattern p = Pattern.compile(endpoint.getConfiguration().getZabbixtemplatepattern());
+        Matcher matcher = p.matcher(template);
 
         // if Template name has Template pattern
         if (matcher.matches()) {
@@ -528,9 +501,9 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
         event.setParametr(objectid);
         event.setOrigin(hostHost);
-        event.setCi(String.format("%s:%s", endpoint.getConfiguration().getSource(), parentID));
-        event.setHost(newhostname);
-        event.setObject(newobject);
+        event.setCi(String.format("%s:%s", endpoint.getConfiguration().getSource(), ciId));
+        event.setHost(shortHostNameWithoutAlias);
+        event.setObject(newObjectName);
         event.setEventsource(String.format("%s", endpoint.getConfiguration().getSource()));
         event.setSeverity(setRightSeverity(severity.toUpperCase()));
 
