@@ -339,7 +339,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         return eventsList;
     }
 
-    private Event checkAlertInJsonAndCreateEvent(String[] systemActionIDs, JSONObject event) {
+    Event checkAlertInJsonAndCreateEvent(String[] systemActionIDs, JSONObject event) {
         String alertActionId;
 
         JSONArray alerts = event.getJSONArray("alerts");
@@ -476,7 +476,6 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         // zabbixItemCiParentPattern=(.*)::(.*)
         // if Item has CI pattern
         // get hash (ciid) and parsed name for CI item
-
         String[] returnCiArray = checkItemForCi(itemName, hostid, fullHostNameWithAlias,
                 endpoint.getConfiguration().getItemCiPattern(),
                 endpoint.getConfiguration().getItemCiParentPattern(),
