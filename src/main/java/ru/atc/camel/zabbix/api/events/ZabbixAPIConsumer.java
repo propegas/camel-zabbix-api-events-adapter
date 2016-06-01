@@ -456,9 +456,14 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             // Use hostid (as ciid) of hostHost
             ciId = hostid;
         } else {
+            // endPart
             fullHostNameWithAlias = checkHostAliases(null, hostHost, hostName)[1];
+            // beginPart
             shortHostNameWithoutAlias = checkHostAliases(null, hostHost, hostName)[2];
         }
+
+        if (template.contains("--VMware Guest--"))
+            shortHostNameWithoutAlias = fullHostNameWithAlias;
 
         event.setExternalid(eventId);
         event.setStatus(setRightStatus(status));

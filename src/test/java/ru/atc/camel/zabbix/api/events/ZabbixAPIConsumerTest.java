@@ -210,4 +210,41 @@ public class ZabbixAPIConsumerTest {
         Assert.assertThat(eventFromJson.getObject(), CoreMatchers.is("EXPANDER PORT: ENCLOSURE ID 1, CONTROLLER A, PHY 0, PHY INDEX 24, TYPE SC-1".toUpperCase()));
         Assert.assertThat(eventFromJson.getParametr(), CoreMatchers.is("62407"));
     }
+
+    @Test
+    public void testCiItemNaming7() throws Exception {
+
+        ZabbixAPIComponent zabbixAPIComponent = new ZabbixAPIComponent();
+
+        Processor processor = new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+
+            }
+        };
+
+        ZabbixAPIConsumer testCons;
+        ZabbixAPIEndpoint zabbixAPIEndpoint = new ZabbixAPIEndpoint("", "", zabbixAPIComponent);
+        ZabbixAPIConfiguration zabbixAPIConfiguration = new ZabbixAPIConfiguration();
+        zabbixAPIConfiguration.setDelay(5);
+        zabbixAPIConfiguration.setZabbixActionXmlNs("http://skuf.gosuslugi.ru/mon/");
+        zabbixAPIConfiguration.setItemCiParentPattern("(.*)::(.*)");
+        zabbixAPIConfiguration.setItemCiPattern("\\[(.*)\\](.*)");
+        zabbixAPIConfiguration.setItemCiTypePattern("(.*)\\((.*)\\)");
+        zabbixAPIConfiguration.setSource("Zabbix");
+        zabbixAPIConfiguration.setZabbixtemplatepattern(".*--(.*)--.*");
+        zabbixAPIEndpoint.setConfiguration(zabbixAPIConfiguration);
+        testCons = new ZabbixAPIConsumer(zabbixAPIEndpoint, processor);
+
+        String stringEventFromZabbix = "{\"ns\":\"877750235\",\"source\":\"0\",\"clock\":\"1461881850\",\"alerts\":[{\"message\":\":echo '<ns:zabbixEvent xmlns:ns=\\\"http://skuf.gosuslugi.ru/mon/\\\" eventid=\\\"8587471\\\"><ns:date>2016.04.29</ns:date><ns:time>01:17:30</ns:time><ns:host>500a2230-a55a-0b0a-f151-c878e8cb58eb</ns:host><ns:triggername><![CDATA[VM backup status: more than 24 hours from latest backup]]></ns:triggername><ns:triggerid>36065</ns:triggerid><ns:status>PROBLEM</ns:status><ns:itemid>202391</ns:itemid><ns:value><![CDATA[1461795430]]></ns:value><ns:itemkey><![CDATA[vc.vm.config[vmconfig,backupTime2]]]></ns:itemkey><ns:itemkeyorig><![CDATA[vc.vm.config[vmconfig,backupTime2]]]></ns:itemkeyorig><ns:itemname><![CDATA[VM Config: backupTime (unixtime)]]></ns:itemname><ns:itemnameorig><![CDATA[VM Config: backupTime (unixtime)]]></ns:itemnameorig><ns:severity>Warning</ns:severity><ns:triggerurl></ns:triggerurl><ns:proxyname>Proxy: </ns:proxyname><ns:hostgroup>Virtual machines </ns:hostgroup><ns:template>Template Virt --VMware Guest-- additional config </ns:template><ns:metadescription><![CDATA[]]></ns:metadescription><ns:alias>{$MC_SMC_ALIAS}</ns:alias></ns:zabbixEvent>' > '/var/tmp/zbx/8587471.PROBLEM.xml'\",\"actionid\":\"7\",\"alertid\":\"252994\",\"mediatypes\":[],\"eventid\":\"8587471\"}],\"acknowledged\":\"0\",\"hosts\":[{\"host\":\"500a2230-a55a-0b0a-f151-c878e8cb58eb\",\"hostid\":\"11774\",\"name\":\"172.20.22.211--Tgc1-tms\"}],\"value\":\"1\",\"object\":\"0\",\"objectid\":\"36065\",\"eventid\":\"8587471\",\"relatedObject\":{\"triggerid\":\"36065\",\"status\":\"0\",\"priority\":\"2\",\"description\":\"VM backup status: more than 24 hours from latest backup\",\"value\":\"1\"}}";
+        JSONObject jsonEventFromZabbix = (JSONObject) JSON.parse(stringEventFromZabbix);
+
+        Event eventFromJson = testCons.checkAlertInJsonAndCreateEvent(new String[]{"7", "8", "9"}, jsonEventFromZabbix);
+
+        Assert.assertThat(eventFromJson.getHost(), CoreMatchers.is("Tgc1-tms".toUpperCase()));
+        Assert.assertThat(eventFromJson.getCi(), CoreMatchers.is("Zabbix:11774"));
+        Assert.assertThat(eventFromJson.getOrigin(), CoreMatchers.is("500a2230-a55a-0b0a-f151-c878e8cb58eb"));
+        Assert.assertThat(eventFromJson.getObject(), CoreMatchers.is("VM Config: backupTime (unixtime)".toUpperCase()));
+        Assert.assertThat(eventFromJson.getParametr(), CoreMatchers.is("36065"));
+    }
 }
