@@ -67,7 +67,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         this.setDelay(endpoint.getConfiguration().getDelay());
     }
 
-    public static void genHeartbeatMessage(Exchange exchange) {
+    public static void genHeartbeatMessage(Exchange exchange, String source) {
 
         long timestamp = System.currentTimeMillis();
         timestamp = timestamp / 1000;
@@ -85,7 +85,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         exchange.getIn().setHeader("Timestamp", timestamp);
         exchange.getIn().setHeader("queueName", "Heartbeats");
         exchange.getIn().setHeader("Type", "Heartbeats");
-        exchange.getIn().setHeader("Source", endpoint.getConfiguration().getAdaptername());
+        exchange.getIn().setHeader("Source", source);
 
     }
 
@@ -108,7 +108,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         // only one operation implemented for now !
 
         // send HEARTBEAT
-        genHeartbeatMessage(getEndpoint().createExchange());
+        genHeartbeatMessage(getEndpoint().createExchange(), endpoint.getConfiguration().getAdaptername());
 
         return timeout;
     }
