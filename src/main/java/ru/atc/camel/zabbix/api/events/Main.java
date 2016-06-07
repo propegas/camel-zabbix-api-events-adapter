@@ -23,7 +23,7 @@ import java.util.Properties;
 
 public final class Main {
 
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    private static final Logger logger = LoggerFactory.getLogger("mainLogger");
     private static final int CACHE_SIZE = 2500;
     private static final int MAX_FILE_SIZE = 512000;
 

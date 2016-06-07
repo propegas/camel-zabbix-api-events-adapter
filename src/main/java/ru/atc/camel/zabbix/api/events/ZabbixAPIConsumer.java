@@ -55,7 +55,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
     private static final int MAX_CONN_TOTAL = 40;
     private static final int CONNECTION_TIME_TO_LIVE = 120;
 
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    private static final Logger logger = LoggerFactory.getLogger("mainLogger");
+    private static final Logger loggerErrors = LoggerFactory.getLogger("errorsLogger");
 
     private static ZabbixAPIEndpoint endpoint;
 
@@ -77,7 +78,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         genevent.setObject("HEARTBEAT");
         genevent.setSeverity(PersistentEventSeverity.OK.name());
         genevent.setTimestamp(timestamp);
-        genevent.setEventsource(String.format("%s", endpoint.getConfiguration().getAdaptername()));
+
+        genevent.setEventsource(String.format("%s", source));
 
         logger.info(" **** Create Exchange for Heartbeat Message container");
 
@@ -142,11 +144,11 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             logger.info("Processed Events: " + allEventsList.size());
 
         } catch (NullPointerException e) {
-            logger.error(String.format("Error while get Events from API: %s ", e));
+            logger.error("Error while get Events from API", e);
             genErrorMessage(e.getMessage() + " " + e.toString());
             return 0;
         } catch (Exception e) {
-            logger.error(String.format("General Error while get Events from API: %s ", e));
+            logger.error("General Error while get Events from API", e);
             genErrorMessage(e.getMessage() + " " + e.toString());
             return 0;
         } finally {
@@ -298,7 +300,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             getRequest = requestBuilder.build();
 
         } catch (Exception ex) {
-            logger.error(String.format("General Error while get Events from API: %s ", ex));
+            logger.error("General Error while get Events from API", ex);
             throw new RuntimeException("Failed create JSON request for get Open Events by ID");
         }
 
@@ -308,8 +310,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             openEvents = getResponse.getJSONArray("result");
 
         } catch (Exception e) {
-            logger.error(String.format("General Error while get Events from API: %s ", e));
-            throw new RuntimeException("Failed get JSON response result for Open Events by ID");
+            logger.error("General Error while get Events from API", e);
+            throw new RuntimeException("Failed get JSON response result for Open Events by ID: " + e.toString());
         }
 
         // array for generated events from received JSONs
@@ -406,7 +408,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
                         status, timestamp, objectId, alertresult);
 
             } else {
-                logger.error("**** Received bad-formatted message.  ");
+                logger.error("**** Received bad-formatted message. ");
+                genErrorMessage("Received bad-formatted message.");
                 genEvent = null;
             }
 
@@ -631,7 +634,9 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             return alertreturn;
 
         } catch (XPathExpressionException | DOMException e) {
-            logger.error(String.format("Error while get 'itemid' from XML string: %s ", e));
+            logger.error("Error while get elements from XML string", e);
+            genErrorMessage(String.format("Error while get elements from XML string: %s", e.toString()));
+            //throw new RuntimeException("Failed get JSON response result for Open Events by ID: " + e.toString());
             return null;
         }
     }
@@ -730,6 +735,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
                 logger.debug("*** Received JSON Event Value: " + status);
             } catch (Exception e) {
                 logger.error(String.format("Error while get attributes from JSONObject: %s ", e));
+                //genErrorMessage(String.format("Error while get elements from XML string: %s", e.toString()));
                 logger.debug("*** No event for trigger: " + triggerid);
             }
 
@@ -749,7 +755,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         genevent.setEventCategory("ADAPTER");
         genevent.setSeverity(PersistentEventSeverity.CRITICAL.name());
         genevent.setTimestamp(timestamp);
-        genevent.setEventsource(String.format("%s", endpoint.getConfiguration().getSource()));
+        genevent.setEventsource(String.format("%s", endpoint.getConfiguration().getAdaptername()));
         genevent.setStatus("OPEN");
         genevent.setHost("adapter");
 
@@ -765,7 +771,9 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         try {
             getProcessor().process(exchange);
         } catch (Exception e) {
-            logger.error("Ошибка при передачи сообщения в очередь: ", e);
+            String messageText = "Ошибка при передачи сообщения в очередь";
+            loggerErrors.error(messageText, e);
+            logger.error(messageText, e);
         }
 
     }
