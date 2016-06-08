@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import static ru.atc.adapters.message.CamelMessageManager.genHeartbeatMessage;
+
 public final class Main {
 
     private static final Logger logger = LoggerFactory.getLogger("mainLogger");
@@ -55,12 +57,10 @@ public final class Main {
         logger.info("activemqIp: " + activemqIp);
         logger.info("activemqPort: " + activemqPort);
 
-        // get Properties from file
-        Properties prop = new Properties();
-        InputStream input = null;
         try {
-
-            input = new FileInputStream("zabbixapi.properties");
+            // get Properties from file
+            InputStream input = new FileInputStream("zabbixapi.properties");
+            Properties prop = new Properties();
 
             // load a properties file
             prop.load(input);
@@ -68,15 +68,7 @@ public final class Main {
             source = prop.getProperty("source");
             adaptername = prop.getProperty("adaptername");
         } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            if (input != null) {
-                try {
-                    input.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            logger.error("Error while open and parsing properties file", ex);
         }
 
         org.apache.camel.main.Main main = new org.apache.camel.main.Main();
@@ -111,7 +103,7 @@ public final class Main {
                     .process(new Processor() {
                         @Override
                         public void process(Exchange exchange) throws Exception {
-                            ZabbixAPIConsumer.genHeartbeatMessage(exchange, adaptername);
+                            genHeartbeatMessage(exchange, adaptername);
                         }
                     })
                     .marshal(myJson)

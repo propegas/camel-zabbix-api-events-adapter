@@ -18,7 +18,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-import ru.at_consulting.itsm.event.Event;
+import ru.atc.adapters.type.Event;
 import ru.atc.monitoring.zabbix.api.DefaultZabbixApi;
 import ru.atc.monitoring.zabbix.api.Request;
 import ru.atc.monitoring.zabbix.api.RequestBuilder;
@@ -43,6 +43,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static ru.atc.adapters.message.CamelMessageManager.genAndSendErrorMessage;
+import static ru.atc.adapters.message.CamelMessageManager.genHeartbeatMessage;
+import static ru.atc.adapters.type.Event.*;
 import static ru.atc.zabbix.general.CiItems.checkHostAliases;
 import static ru.atc.zabbix.general.CiItems.checkHostPattern;
 import static ru.atc.zabbix.general.CiItems.checkItemForCi;
@@ -68,6 +71,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         this.setDelay(endpoint.getConfiguration().getDelay());
     }
 
+    /*
     public static void genHeartbeatMessage(Exchange exchange, String source) {
 
         long timestamp = System.currentTimeMillis();
@@ -90,6 +94,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         exchange.getIn().setHeader("Source", source);
 
     }
+    */
 
     @Override
     protected int poll() throws Exception {
@@ -733,7 +738,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
                 logger.debug("*** Received JSON EventID: " + eventid);
                 logger.debug("*** Received JSON Event Value: " + status);
             } catch (Exception e) {
-                genErrorMessage("Error while get attributes from JSONObject", e);
+                genErrorMessage("Error while get 'lastEvent' attributes from JSONObject", e);
                 logger.debug("*** No event for trigger: " + triggerid);
             }
 
@@ -745,44 +750,13 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
     }
 
     private void genErrorMessage(String message) {
-        genErrorMessage(message, new RuntimeException("No additional exception's text."));
+        genAndSendErrorMessage(this, message, new RuntimeException("No additional exception's text."),
+                endpoint.getConfiguration().getAdaptername());
     }
 
     private void genErrorMessage(String message, Exception exception) {
-
-        logger.error(message, exception);
-        loggerErrors.error(message, exception);
-
-        long timestamp = System.currentTimeMillis();
-        timestamp = timestamp / 1000;
-        String textError = "Возникла ошибка в работе адаптера";
-        Event genevent = new Event();
-        genevent.setMessage(String.format("%s: %s; %s %s",
-                textError, message, exception.getMessage(), exception.toString()));
-        genevent.setEventCategory("ADAPTER");
-        genevent.setSeverity(PersistentEventSeverity.CRITICAL.name());
-        genevent.setTimestamp(timestamp);
-        genevent.setEventsource(String.format("%s", endpoint.getConfiguration().getAdaptername()));
-        genevent.setStatus("OPEN");
-        genevent.setHost("adapter");
-
-        logger.info(" **** Create Exchange for Error Message container");
-        Exchange exchange = getEndpoint().createExchange();
-        exchange.getIn().setBody(genevent, Event.class);
-
-        exchange.getIn().setHeader("EventIdAndStatus", "Error_" + timestamp);
-        exchange.getIn().setHeader("Timestamp", timestamp);
-        exchange.getIn().setHeader("queueName", "Events");
-        exchange.getIn().setHeader("Type", "Error");
-
-        try {
-            getProcessor().process(exchange);
-        } catch (Exception e) {
-            String messageText = "Ошибка при передачи сообщения в очередь";
-            loggerErrors.error(messageText, e);
-            logger.error(messageText, e);
-        }
-
+        genAndSendErrorMessage(this, message, exception,
+                endpoint.getConfiguration().getAdaptername());
     }
 
     private String setRightSeverity(String severity) {
@@ -831,8 +805,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 * State of the related object.
 
 * Possible values for trigger events:
-* 0 - OK;
-* 1 - problem.
+* 0 : OK;
+* 1 : problem.
          */
 
         switch (status) {
@@ -850,18 +824,6 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         logger.debug("***************** status: " + status);
         logger.debug("***************** newstatus: " + newstatus);
         return newstatus;
-    }
-
-    public enum PersistentEventSeverity {
-        OK, INFO, WARNING, MINOR, MAJOR, CRITICAL;
-
-        public static PersistentEventSeverity fromValue(String v) {
-            return valueOf(v);
-        }
-
-        public String value() {
-            return name();
-        }
     }
 
 }

@@ -7,7 +7,7 @@ import org.apache.camel.Processor;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
-import ru.at_consulting.itsm.event.Event;
+import ru.atc.adapters.type.Event;
 
 import static ru.atc.zabbix.general.CiItems.checkHostAliases;
 import static ru.atc.zabbix.general.CiItems.checkHostPattern;
