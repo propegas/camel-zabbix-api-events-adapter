@@ -37,6 +37,8 @@ public class ZabbixAPIConfiguration {
 
     private String itemCiTypePattern;
 
+    private String hostAliasPattern;
+
     private String lasteventid;
 
     private int maxEventsPerRequest = MAX_EVENTS_PER_REQUEST;
@@ -177,5 +179,13 @@ public class ZabbixAPIConfiguration {
 
     public void setItemCiTypePattern(String itemCiTypePattern) {
         this.itemCiTypePattern = itemCiTypePattern;
+    }
+
+    public String getHostAliasPattern() {
+        return hostAliasPattern;
+    }
+
+    public void setHostAliasPattern(String hostAliasPattern) {
+        this.hostAliasPattern = hostAliasPattern;
     }
 }

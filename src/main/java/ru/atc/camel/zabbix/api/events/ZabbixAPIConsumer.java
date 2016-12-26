@@ -5,6 +5,10 @@ import com.alibaba.fastjson.JSONObject;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.impl.ScheduledPollConsumer;
+import org.apache.commons.configuration2.PropertiesConfiguration;
+import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
+import org.apache.commons.configuration2.builder.fluent.Parameters;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
@@ -45,7 +49,7 @@ import java.util.regex.Pattern;
 
 import static ru.atc.adapters.message.CamelMessageManager.genAndSendErrorMessage;
 import static ru.atc.adapters.message.CamelMessageManager.genHeartbeatMessage;
-import static ru.atc.adapters.type.Event.*;
+import static ru.atc.adapters.type.Event.PersistentEventSeverity;
 import static ru.atc.zabbix.general.CiItems.checkHostAliases;
 import static ru.atc.zabbix.general.CiItems.checkHostPattern;
 import static ru.atc.zabbix.general.CiItems.checkItemForCi;
@@ -70,31 +74,6 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         this.setInitialDelay(0);
         this.setDelay(endpoint.getConfiguration().getDelay());
     }
-
-    /*
-    public static void genHeartbeatMessage(Exchange exchange, String source) {
-
-        long timestamp = System.currentTimeMillis();
-        timestamp = timestamp / 1000;
-        Event genevent = new Event();
-        genevent.setMessage("Сигнал HEARTBEAT от адаптера");
-        genevent.setEventCategory("ADAPTER");
-        genevent.setObject("HEARTBEAT");
-        genevent.setSeverity(PersistentEventSeverity.OK.name());
-        genevent.setTimestamp(timestamp);
-
-        genevent.setEventsource(String.format("%s", source));
-
-        logger.info(" **** Create Exchange for Heartbeat Message container");
-
-        exchange.getIn().setBody(genevent, Event.class);
-        exchange.getIn().setHeader("Timestamp", timestamp);
-        exchange.getIn().setHeader("queueName", "Heartbeats");
-        exchange.getIn().setHeader("Type", "Heartbeats");
-        exchange.getIn().setHeader("Source", source);
-
-    }
-    */
 
     @Override
     protected int poll() throws Exception {
@@ -128,17 +107,17 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         logger.info("Try to get Events.");
 
         DefaultZabbixApi zabbixApi = null;
-        int lasteventid = Integer.parseInt(endpoint.getConfiguration().getLasteventid());
+        int lastEventId = Integer.parseInt(endpoint.getConfiguration().getLasteventid());
 
         try {
 
             // inid zabbix api object and login to zabbix server
             zabbixApi = initZabbixApi();
 
-            logger.debug("Last Event ID: " + lasteventid);
+            logger.debug("Last Event ID: " + lastEventId);
             // lastid = 0 (first execution)
 
-            openEventsList = getLastEventsFromApi(zabbixApi, lasteventid);
+            openEventsList = getLastEventsFromApi(zabbixApi, lastEventId);
 
             // add events to main global array of events
             if (openEventsList != null)
@@ -167,17 +146,19 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         return 1;
     }
 
-    private List<Event> getLastEventsFromApi(DefaultZabbixApi zabbixApi, int lasteventid) {
+    private List<Event> getLastEventsFromApi(DefaultZabbixApi zabbixApi, int lastEventId) {
         List<Event> openEventsList;
-        if (lasteventid == 0) {
+        if (lastEventId == 0) {
             // Get all Actual Triggers (eventid) from Zabbix
             logger.info("Try to get actual opened triggers");
             String[] openTriggerEventIDs = getOpenTriggers(zabbixApi);
 
             // get last eventid from Zabbix
-            String lasteventidstr = getLastEventId(zabbixApi);
-            if (lasteventidstr != null) {
-                endpoint.getConfiguration().setLasteventid(lasteventidstr);
+            String lastEventIdStr = getLastEventId(zabbixApi);
+            if (lastEventIdStr != null) {
+                logger.debug("Saving Last Event ID in memory and to file...");
+                endpoint.getConfiguration().setLasteventid(lastEventIdStr);
+                updatePropertyInFile("lasteventid", lastEventIdStr);
             }
 
             // Get all Actual Open Events for Triggers from Zabbix
@@ -185,20 +166,42 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             openEventsList = getEventsFromLastId(zabbixApi, openTriggerEventIDs, false);
         } else {
             // Get all Actual Events for Triggers from Zabbix (lastid + 1)
-            logger.info("Try to get new Events from " + lasteventid);
-            String lasteventidstr = Integer.toString(lasteventid + 1);
+            logger.info("Try to get new Events from " + lastEventId);
+            String lasteventidstr = Integer.toString(lastEventId + 1);
             String[] eventidsarr = {""};
             eventidsarr[0] = lasteventidstr;
 
             // get last eventid from Zabbix and save it in config (memory)
-            String lasteventidstrnew = getLastEventId(zabbixApi);
-            if (lasteventidstrnew != null) {
-                endpoint.getConfiguration().setLasteventid(lasteventidstrnew);
+            String lastEventIdStrNew = getLastEventId(zabbixApi);
+            if (lastEventIdStrNew != null) {
+                logger.debug("Saving Last Event ID in memory and to file...");
+                endpoint.getConfiguration().setLasteventid(lastEventIdStrNew);
+                updatePropertyInFile("lasteventid", lastEventIdStrNew);
             }
 
             openEventsList = getEventsFromLastId(zabbixApi, eventidsarr, true);
         }
         return openEventsList;
+    }
+
+    private void updatePropertyInFile(String propertyName, String propertyValue) {
+        try {
+            // get Properties from file
+            FileBasedConfigurationBuilder<PropertiesConfiguration> builder =
+                    new FileBasedConfigurationBuilder<>(PropertiesConfiguration.class)
+                            .configure(new Parameters().properties()
+                                    .setFileName("zabbixapi.properties")
+                                    .setThrowExceptionOnMissing(true)
+                                    //.setListDelimiterHandler(new DefaultListDelimiterHandler(';'))
+                                    .setIncludesAllowed(false));
+            PropertiesConfiguration config = builder.getConfiguration();
+
+            config.setProperty(propertyName, propertyValue);
+            builder.save();
+        } catch (ConfigurationException e) {
+            genErrorMessage("Error while open and save property file", e);
+        }
+
     }
 
     private DefaultZabbixApi initZabbixApi() {
@@ -444,7 +447,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             template = alertresult.get("template").toString();
             itemName = alertresult.get("itemname").toString();
         } catch (Exception e) {
-            genErrorMessage("Received bad-formatted XML message, fields not found");
+            genErrorMessage("Received bad-formatted XML message, fields not found", e);
             return null;
         }
 
@@ -465,10 +468,12 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             // Use hostid (as ciid) of hostHost
             ciId = hostid;
         } else {
-            // endPart
-            fullHostNameWithAlias = checkHostAliases(null, hostHost, hostName)[1];
-            // beginPart
-            shortHostNameWithoutAlias = checkHostAliases(null, hostHost, hostName)[2];
+            // endPart of name
+            fullHostNameWithAlias = checkHostAliases(null, hostHost, hostName,
+                    endpoint.getConfiguration().getHostAliasPattern())[1];
+            // beginPart of name
+            shortHostNameWithoutAlias = checkHostAliases(null, hostHost, hostName,
+                    endpoint.getConfiguration().getHostAliasPattern())[2];
         }
 
         if (template.contains("--VMware Guest--"))
@@ -490,10 +495,16 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         // zabbixItemCiParentPattern=(.*)::(.*)
         // if Item has CI pattern
         // get hash (ciid) and parsed name for CI item
-        String[] returnCiArray = checkItemForCi(itemName, hostid, fullHostNameWithAlias,
-                endpoint.getConfiguration().getItemCiPattern(),
-                endpoint.getConfiguration().getItemCiParentPattern(),
-                endpoint.getConfiguration().getItemCiTypePattern());
+        String[] returnCiArray = new String[0];
+        try {
+            returnCiArray = checkItemForCi(itemName, hostid, fullHostNameWithAlias,
+                    endpoint.getConfiguration().getItemCiPattern(),
+                    endpoint.getConfiguration().getItemCiParentPattern(),
+                    endpoint.getConfiguration().getItemCiTypePattern());
+        } catch (Exception e) {
+            genErrorMessage("Failed while checking Zabbix Item CI", e);
+            throw new RuntimeException("Failed while checking Zabbix Item CI");
+        }
         if (!returnCiArray[0].isEmpty()) {
             ciId = returnCiArray[0];
             itemName = returnCiArray[1].toUpperCase();

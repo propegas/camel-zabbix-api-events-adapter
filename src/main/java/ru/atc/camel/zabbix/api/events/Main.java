@@ -12,7 +12,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.processor.idempotent.FileIdempotentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.at_consulting.itsm.event.Event;
+import ru.atc.adapters.type.Event;
 
 import javax.jms.ConnectionFactory;
 import java.io.File;
@@ -26,13 +26,13 @@ import static ru.atc.adapters.message.CamelMessageManager.genHeartbeatMessage;
 public final class Main {
 
     private static final Logger logger = LoggerFactory.getLogger("mainLogger");
+    private static final Logger loggerErrors = LoggerFactory.getLogger("errorsLogger");
     private static final int CACHE_SIZE = 2500;
     private static final int MAX_FILE_SIZE = 512000;
 
     private static String activemqPort;
     private static String activemqIp;
 
-    private static String source;
     private static String adaptername;
 
     private Main() {
@@ -44,19 +44,6 @@ public final class Main {
         logger.info("Starting Custom Apache Camel component example");
         logger.info("Press CTRL+C to terminate the JVM");
 
-        if (args.length == 2) {
-            activemqPort = args[1];
-            activemqIp = args[0];
-        }
-
-        if (activemqPort == null || "".equals(activemqPort))
-            activemqPort = "61616";
-        if (activemqIp == null || "".equals(activemqIp))
-            activemqIp = "172.20.19.195";
-
-        logger.info("activemqIp: " + activemqIp);
-        logger.info("activemqPort: " + activemqPort);
-
         try {
             // get Properties from file
             InputStream input = new FileInputStream("zabbixapi.properties");
@@ -64,19 +51,25 @@ public final class Main {
 
             // load a properties file
             prop.load(input);
+            input.close();
 
-            source = prop.getProperty("source");
             adaptername = prop.getProperty("adaptername");
+            activemqIp = prop.getProperty("activemq.ip");
+            activemqPort = prop.getProperty("activemq.port");
         } catch (IOException ex) {
             logger.error("Error while open and parsing properties file", ex);
         }
+
+        logger.info("**** adaptername: " + adaptername);
+        logger.info("activemqIp: " + activemqIp);
+        logger.info("activemqPort: " + activemqPort);
 
         org.apache.camel.main.Main main = new org.apache.camel.main.Main();
         main.addRouteBuilder(new IntegrationRoute());
         main.run();
     }
 
-    public static class IntegrationRoute extends RouteBuilder {
+    private static class IntegrationRoute extends RouteBuilder {
         @Override
         public void configure() throws Exception {
 
@@ -109,7 +102,7 @@ public final class Main {
                     .marshal(myJson)
                     .to("activemq:{{heartbeatsqueue}}")
                     .log("*** Heartbeat: ${id}")
-                    .log(LoggingLevel.DEBUG, "***HEARTBEAT BODY: ${in.body}");
+                    .log(LoggingLevel.DEBUG, logger, "***HEARTBEAT BODY: ${in.body}");
 
             from(new StringBuilder().append("zabbixapi://events?")
                     .append("delay={{delay}}&")
@@ -122,21 +115,21 @@ public final class Main {
                     .append("zabbixactionprefix={{zabbixactionprefix}}&")
                     .append("zabbixActionXmlNs={{zabbixactionxmlns}}&")
                     .append("zabbixtemplatepattern={{zabbixtemplatepattern}}&")
+                    .append("hostAliasPattern={{hostAliasPattern}}&")
                     .append("groupCiPattern={{zabbix_group_ci_pattern}}&")
                     .append("groupSearchPattern={{zabbix_group_search_pattern}}&")
                     .append("itemCiPattern={{zabbix_item_ke_pattern}}&")
                     .append("itemCiParentPattern={{zabbix_item_ci_parent_pattern}}&")
                     .append("itemCiTypePattern={{zabbix_item_ci_type_pattern}}&")
-                    .append("maxEventsPerRequest={{maxEventsPerRequest}}&")
-                    .append("zabbixip={{zabbixip}}")
+                    .append("maxEventsPerRequest={{maxEventsPerRequest}}")
                     .toString())
 
                     .choice()
                     .when(header("Type").isEqualTo("Error"))
                     .marshal(myJson)
                     .to("activemq:{{errorsqueue}}")
-                    .log(LoggingLevel.INFO, "Error: ${id} ${header.EventUniqueId}")
-                    .log(LoggingLevel.INFO, "*** NEW ERROR BODY: ${in.body}")
+                    .log(LoggingLevel.INFO, logger, "Error: ${id} ${header.EventUniqueId}")
+                    .log(LoggingLevel.ERROR, logger, "*** NEW ERROR BODY: ${in.body}")
 
                     .otherwise()
                     .idempotentConsumer(
@@ -149,7 +142,7 @@ public final class Main {
                     .marshal(myJson)
                     .to("activemq:{{eventsqueue}}")
                     .log("*** NEW EVENT: ${id} ${header.EventUniqueId}")
-                    .log(LoggingLevel.DEBUG, "*** NEW EVENT BODY: ${in.body}");
+                    .log(LoggingLevel.DEBUG, logger, "*** NEW EVENT BODY: ${in.body}");
         }
     }
 }

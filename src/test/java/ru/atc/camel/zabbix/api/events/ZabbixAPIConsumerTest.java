@@ -122,6 +122,7 @@ public class ZabbixAPIConsumerTest {
         zabbixAPIConfiguration.setItemCiTypePattern("(.*)\\((.*)\\)");
         zabbixAPIConfiguration.setSource("Zabbix");
         zabbixAPIConfiguration.setZabbixtemplatepattern(".*--(.*)--.*");
+        zabbixAPIConfiguration.setHostAliasPattern("(.*)--(.*)");
         zabbixAPIEndpoint.setConfiguration(zabbixAPIConfiguration);
         testCons = new ZabbixAPIConsumer(zabbixAPIEndpoint, processor);
 
@@ -199,13 +200,13 @@ public class ZabbixAPIConsumerTest {
         zabbixAPIEndpoint.setConfiguration(zabbixAPIConfiguration);
         testCons = new ZabbixAPIConsumer(zabbixAPIEndpoint, processor);
 
-        String stringEventFromZabbix = "{\"ns\":\"870992284\",\"source\":\"0\",\"clock\":\"1464613592\",\"alerts\":[{\"message\":\":echo '<ns:zabbixEvent xmlns:ns=\\\"http://skuf.gosuslugi.ru/mon/\\\" eventid=\\\"11763576\\\"><ns:date>2016.05.30</ns:date><ns:time>16:06:32</ns:time><ns:host>MSA2040-C2-2</ns:host><ns:triggername><![CDATA[Изменился Health-статус IO-порта Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1]]></ns:triggername><ns:triggerid>62407</ns:triggerid><ns:status>PROBLEM</ns:status><ns:itemid>230389</ns:itemid><ns:value><![CDATA[OK (1)]]></ns:value><ns:itemkey><![CDATA[hp.p2000.stats[ioports,_1_a_0_24_sc-1,elem-status-numeric]]]></ns:itemkey><ns:itemkeyorig><![CDATA[hp.p2000.stats[ioports,_1_a_0_24_sc-1,elem-status-numeric]]]></ns:itemkeyorig><ns:itemname><![CDATA[[Контроллер A (Контроллеры)::Expander Port: Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1 (IO порты)] Element Status]]></ns:itemname><ns:itemnameorig><![CDATA[[Контроллер A (Контроллеры)::Expander Port: Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1 (IO порты)] Element Status]]></ns:itemnameorig><ns:severity>High</ns:severity><ns:triggerurl></ns:triggerurl><ns:proxyname>Proxy: </ns:proxyname><ns:hostgroup>HP MSA Storage MSA 2040 SAN, (Невский.СХД)ТЭЦ-15 Автовская </ns:hostgroup><ns:template>*UNKNOWN* </ns:template><ns:metadescription><![CDATA[last()}<>1]]></ns:metadescription><ns:alias>{$MC_SMC_ALIAS}</ns:alias></ns:zabbixEvent>' > '/dev/null'\",\"actionid\":\"7\",\"alertid\":\"556901\",\"mediatypes\":[],\"eventid\":\"11763576\"}],\"acknowledged\":\"0\",\"hosts\":[{\"host\":\"MSA2040-C2-2\",\"hostid\":\"10511\",\"name\":\"MSA2040-C2-2\"}],\"value\":\"1\",\"object\":\"0\",\"objectid\":\"62407\",\"eventid\":\"11763576\",\"relatedObject\":{\"triggerid\":\"62407\",\"status\":\"0\",\"priority\":\"4\",\"description\":\"Изменился Health-статус IO-порта Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1\",\"value\":\"1\"}}";
+        String stringEventFromZabbix = "{\"ns\":\"870992284\",\"source\":\"0\",\"clock\":\"1464613592\",\"alerts\":[{\"message\":\":echo '<ns:zabbixEvent xmlns:ns=\\\"http://skuf.gosuslugi.ru/mon/\\\" eventid=\\\"11763576\\\"><ns:date>2016.05.30</ns:date><ns:time>16:06:32</ns:time><ns:host>MSA2040-C2-2</ns:host><ns:triggername><![CDATA[Изменился Health-статус IO-порта Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1]]></ns:triggername><ns:triggerid>62407</ns:triggerid><ns:status>PROBLEM</ns:status><ns:itemid>230389</ns:itemid><ns:value><![CDATA[OK (1)]]></ns:value><ns:itemkey><![CDATA[hp.p2000.stats[ioports,_1_a_0_24_sc-1,elem-status-numeric]]]></ns:itemkey><ns:itemkeyorig><![CDATA[hp.p2000.stats[ioports,_1_a_0_24_sc-1,elem-status-numeric]]]></ns:itemkeyorig><ns:itemname><![CDATA[[Контроллер A (Контроллеры)::Expander Port: Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1 | enc.0.24.sc-1 (IO порты)] Element Status]]></ns:itemname><ns:itemnameorig><![CDATA[[Контроллер A (Контроллеры)::Expander Port: Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1 | enc.0.24.sc-1 (IO порты)] Element Status]]></ns:itemnameorig><ns:severity>High</ns:severity><ns:triggerurl></ns:triggerurl><ns:proxyname>Proxy: </ns:proxyname><ns:hostgroup>HP MSA Storage MSA 2040 SAN, (Невский.СХД)ТЭЦ-15 Автовская </ns:hostgroup><ns:template>*UNKNOWN* </ns:template><ns:metadescription><![CDATA[last()}<>1]]></ns:metadescription><ns:alias>{$MC_SMC_ALIAS}</ns:alias></ns:zabbixEvent>' > '/dev/null'\",\"actionid\":\"7\",\"alertid\":\"556901\",\"mediatypes\":[],\"eventid\":\"11763576\"}],\"acknowledged\":\"0\",\"hosts\":[{\"host\":\"MSA2040-C2-2\",\"hostid\":\"10511\",\"name\":\"MSA2040-C2-2\"}],\"value\":\"1\",\"object\":\"0\",\"objectid\":\"62407\",\"eventid\":\"11763576\",\"relatedObject\":{\"triggerid\":\"62407\",\"status\":\"0\",\"priority\":\"4\",\"description\":\"Изменился Health-статус IO-порта Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1\",\"value\":\"1\"}}";
         JSONObject jsonEventFromZabbix = (JSONObject) JSON.parse(stringEventFromZabbix);
 
         Event eventFromJson = testCons.checkAlertInJsonAndCreateEvent(new String[]{"7", "8", "9"}, jsonEventFromZabbix);
 
         Assert.assertThat(eventFromJson.getHost(), CoreMatchers.is("MSA2040-C2-2"));
-        Assert.assertThat(eventFromJson.getCi(), CoreMatchers.is("Zabbix:7841fbf43ab580036e7e54be79dcd29769d0627e"));
+        Assert.assertThat(eventFromJson.getCi(), CoreMatchers.is("Zabbix:30f6579fe8c0ec17c1f8fa3237995c590b611443"));
         Assert.assertThat(eventFromJson.getOrigin(), CoreMatchers.is("MSA2040-C2-2"));
         Assert.assertThat(eventFromJson.getObject(), CoreMatchers.is("EXPANDER PORT: ENCLOSURE ID 1, CONTROLLER A, PHY 0, PHY INDEX 24, TYPE SC-1".toUpperCase()));
         Assert.assertThat(eventFromJson.getParametr(), CoreMatchers.is("62407"));
@@ -233,6 +234,7 @@ public class ZabbixAPIConsumerTest {
         zabbixAPIConfiguration.setItemCiTypePattern("(.*)\\((.*)\\)");
         zabbixAPIConfiguration.setSource("Zabbix");
         zabbixAPIConfiguration.setZabbixtemplatepattern(".*--(.*)--.*");
+        zabbixAPIConfiguration.setHostAliasPattern("(.*)--(.*)");
         zabbixAPIEndpoint.setConfiguration(zabbixAPIConfiguration);
         testCons = new ZabbixAPIConsumer(zabbixAPIEndpoint, processor);
 
