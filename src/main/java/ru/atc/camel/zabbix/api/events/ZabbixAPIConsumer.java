@@ -66,6 +66,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
     private static final Logger loggerErrors = LoggerFactory.getLogger("errorsLogger");
 
     private static ZabbixAPIEndpoint endpoint;
+
     private DefaultZabbixApi zabbixApiFromSearchEvents;
 
     public ZabbixAPIConsumer(ZabbixAPIEndpoint endpoint, Processor processor) {
@@ -74,6 +75,10 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         this.setTimeUnit(TimeUnit.MINUTES);
         this.setInitialDelay(0);
         this.setDelay(endpoint.getConfiguration().getDelay());
+    }
+
+    public void setZabbixApiFromSearchEvents(DefaultZabbixApi zabbixApiFromSearchEvents) {
+        this.zabbixApiFromSearchEvents = zabbixApiFromSearchEvents;
     }
 
     @Override
@@ -207,7 +212,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
     }
 
-    private DefaultZabbixApi initZabbixApi() {
+    public DefaultZabbixApi initZabbixApi() {
         String zabbixapiurl = endpoint.getConfiguration().getZabbixapiurl();
         String username = endpoint.getConfiguration().getUsername();
         String password = endpoint.getConfiguration().getPassword();

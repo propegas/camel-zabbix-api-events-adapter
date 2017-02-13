@@ -116,6 +116,9 @@ public class ZabbixAPIConsumerTest {
         ZabbixAPIEndpoint zabbixAPIEndpoint = new ZabbixAPIEndpoint("", "", zabbixAPIComponent);
         ZabbixAPIConfiguration zabbixAPIConfiguration = new ZabbixAPIConfiguration();
         zabbixAPIConfiguration.setDelay(5);
+        zabbixAPIConfiguration.setZabbixapiurl("http://172.20.19.195/zabbix/api_jsonrpc.php");
+        zabbixAPIConfiguration.setUsername("Admin");
+        zabbixAPIConfiguration.setPassword("zabbix");
         zabbixAPIConfiguration.setZabbixActionXmlNs("http://skuf.gosuslugi.ru/mon/");
         zabbixAPIConfiguration.setItemCiParentPattern("(.*)::(.*)");
         zabbixAPIConfiguration.setItemCiPattern("\\[(.*)\\](.*)");
@@ -125,6 +128,8 @@ public class ZabbixAPIConsumerTest {
         zabbixAPIConfiguration.setHostAliasPattern("(.*)--(.*)");
         zabbixAPIEndpoint.setConfiguration(zabbixAPIConfiguration);
         testCons = new ZabbixAPIConsumer(zabbixAPIEndpoint, processor);
+
+        testCons.setZabbixApiFromSearchEvents(testCons.initZabbixApi());
 
         String stringEventFromZabbix = "{\"ns\":\"599417900\",\"source\":\"0\",\"clock\":\"1464681283\",\"alerts\":[{\"message\":\":echo '<ns:zabbixEvent xmlns:ns=\\\"http://skuf.gosuslugi.ru/mon/\\\" eventid=\\\"11836800\\\"><ns:date>2016.05.31</ns:date><ns:time>10:54:43</ns:time><ns:host>172.20.150.179--NORTEL</ns:host><ns:triggername><![CDATA[SNMP Minor trap]]></ns:triggername><ns:triggerid>15056</ns:triggerid><ns:status>PROBLEM</ns:status><ns:itemid>32580</ns:itemid><ns:value><![CDATA[10:54:42 2016/05/31 TYPE=NORTEL::CODE=DTA0301::SEVERITY=Minor::DESCRIPTION=loop A slip deletion has occurred on PRI2 loop.]]></ns:value><ns:itemkey><![CDATA[snmptrap[SEVERITY=Minor]]]></ns:itemkey><ns:itemkeyorig><![CDATA[snmptrap[SEVERITY=Minor]]]></ns:itemkeyorig><ns:itemname><![CDATA[SNMP Trap SEVERITY=Minor]]></ns:itemname><ns:itemnameorig><![CDATA[SNMP Trap $1]]></ns:itemnameorig><ns:severity>Average</ns:severity><ns:triggerurl></ns:triggerurl><ns:proxyname>Proxy: </ns:proxyname><ns:hostgroup>Невский Nortel, (Невский.СТС)ГЭС-6 Волховская </ns:hostgroup><ns:template>Template --SNMP Traps Nortel-- </ns:template><ns:metadescription><![CDATA[and {Template --SNMP Traps Nortel--:snmptrap[SEVERITY=Minor].nodata(60m)}=0]]></ns:metadescription><ns:alias>{$MC_SMC_ALIAS}</ns:alias></ns:zabbixEvent>' > '/dev/null'\",\"actionid\":\"7\",\"alertid\":\"560477\",\"mediatypes\":[],\"eventid\":\"11836800\"}],\"acknowledged\":\"0\",\"hosts\":[{\"host\":\"172.20.150.179--NORTEL\",\"hostid\":\"10238\",\"name\":\"Диспетчерская АТС ГЭС-6--NORTEL\"}],\"value\":\"1\",\"object\":\"0\",\"objectid\":\"15056\",\"eventid\":\"11836800\",\"relatedObject\":{\"triggerid\":\"15056\",\"status\":\"0\",\"priority\":\"3\",\"description\":\"SNMP Minor trap\",\"value\":\"1\"}}";
         JSONObject jsonEventFromZabbix = (JSONObject) JSON.parse(stringEventFromZabbix);
@@ -227,6 +232,9 @@ public class ZabbixAPIConsumerTest {
         ZabbixAPIConsumer testCons;
         ZabbixAPIEndpoint zabbixAPIEndpoint = new ZabbixAPIEndpoint("", "", zabbixAPIComponent);
         ZabbixAPIConfiguration zabbixAPIConfiguration = new ZabbixAPIConfiguration();
+        zabbixAPIConfiguration.setZabbixapiurl("http://172.20.19.195/zabbix/api_jsonrpc.php");
+        zabbixAPIConfiguration.setUsername("Admin");
+        zabbixAPIConfiguration.setPassword("zabbix");
         zabbixAPIConfiguration.setDelay(5);
         zabbixAPIConfiguration.setZabbixActionXmlNs("http://skuf.gosuslugi.ru/mon/");
         zabbixAPIConfiguration.setItemCiParentPattern("(.*)::(.*)");
@@ -237,6 +245,8 @@ public class ZabbixAPIConsumerTest {
         zabbixAPIConfiguration.setHostAliasPattern("(.*)--(.*)");
         zabbixAPIEndpoint.setConfiguration(zabbixAPIConfiguration);
         testCons = new ZabbixAPIConsumer(zabbixAPIEndpoint, processor);
+
+        testCons.setZabbixApiFromSearchEvents(testCons.initZabbixApi());
 
         String stringEventFromZabbix = "{\"ns\":\"877750235\",\"source\":\"0\",\"clock\":\"1461881850\",\"alerts\":[{\"message\":\":echo '<ns:zabbixEvent xmlns:ns=\\\"http://skuf.gosuslugi.ru/mon/\\\" eventid=\\\"8587471\\\"><ns:date>2016.04.29</ns:date><ns:time>01:17:30</ns:time><ns:host>500a2230-a55a-0b0a-f151-c878e8cb58eb</ns:host><ns:triggername><![CDATA[VM backup status: more than 24 hours from latest backup]]></ns:triggername><ns:triggerid>36065</ns:triggerid><ns:status>PROBLEM</ns:status><ns:itemid>202391</ns:itemid><ns:value><![CDATA[1461795430]]></ns:value><ns:itemkey><![CDATA[vc.vm.config[vmconfig,backupTime2]]]></ns:itemkey><ns:itemkeyorig><![CDATA[vc.vm.config[vmconfig,backupTime2]]]></ns:itemkeyorig><ns:itemname><![CDATA[VM Config: backupTime (unixtime)]]></ns:itemname><ns:itemnameorig><![CDATA[VM Config: backupTime (unixtime)]]></ns:itemnameorig><ns:severity>Warning</ns:severity><ns:triggerurl></ns:triggerurl><ns:proxyname>Proxy: </ns:proxyname><ns:hostgroup>Virtual machines </ns:hostgroup><ns:template>Template Virt --VMware Guest-- additional config </ns:template><ns:metadescription><![CDATA[]]></ns:metadescription><ns:alias>{$MC_SMC_ALIAS}</ns:alias></ns:zabbixEvent>' > '/var/tmp/zbx/8587471.PROBLEM.xml'\",\"actionid\":\"7\",\"alertid\":\"252994\",\"mediatypes\":[],\"eventid\":\"8587471\"}],\"acknowledged\":\"0\",\"hosts\":[{\"host\":\"500a2230-a55a-0b0a-f151-c878e8cb58eb\",\"hostid\":\"11774\",\"name\":\"172.20.22.211--Tgc1-tms\"}],\"value\":\"1\",\"object\":\"0\",\"objectid\":\"36065\",\"eventid\":\"8587471\",\"relatedObject\":{\"triggerid\":\"36065\",\"status\":\"0\",\"priority\":\"2\",\"description\":\"VM backup status: more than 24 hours from latest backup\",\"value\":\"1\"}}";
         JSONObject jsonEventFromZabbix = (JSONObject) JSON.parse(stringEventFromZabbix);
