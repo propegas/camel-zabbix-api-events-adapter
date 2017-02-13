@@ -66,6 +66,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
     private static final Logger loggerErrors = LoggerFactory.getLogger("errorsLogger");
 
     private static ZabbixAPIEndpoint endpoint;
+    private DefaultZabbixApi zabbixApiFromSearchEvents;
 
     public ZabbixAPIConsumer(ZabbixAPIEndpoint endpoint, Processor processor) {
         super(endpoint, processor);
@@ -113,6 +114,8 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
             // inid zabbix api object and login to zabbix server
             zabbixApi = initZabbixApi();
+
+            zabbixApiFromSearchEvents = zabbixApi;
 
             logger.debug("Last Event ID: " + lastEventId);
             // lastid = 0 (first execution)
@@ -456,6 +459,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         String ciId = hostid;
         String newObjectName = itemName;
 
+        String externalHostId = hostid;
         // Check host Aliases
         // Example: KRL-PHOBOSAU--MSSQL
         // if pattern of hostHost or hostName is appropriate as alias-name
@@ -474,6 +478,9 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             // beginPart of name
             shortHostNameWithoutAlias = checkHostAliases(null, hostHost, hostName,
                     endpoint.getConfiguration().getHostAliasPattern())[2];
+            JSONObject jsonHost = getHostByHostNameFromZabbix(shortHostNameWithoutAlias);
+            if (jsonHost != null)
+                externalHostId = jsonHost.getString("hostid");
         }
 
         if (template.contains("--VMware Guest--"))
@@ -495,7 +502,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         // zabbixItemCiParentPattern=(.*)::(.*)
         // if Item has CI pattern
         // get hash (ciid) and parsed name for CI item
-        String[] returnCiArray = new String[0];
+        String[] returnCiArray;
         try {
             returnCiArray = checkItemForCi(itemName, hostid, fullHostNameWithAlias,
                     endpoint.getConfiguration().getItemCiPattern(),
@@ -527,6 +534,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         event.setOrigin(hostHost);
         event.setCi(String.format("%s:%s", endpoint.getConfiguration().getSource(), ciId));
         event.setHost(shortHostNameWithoutAlias);
+        event.setExternalHostId(String.format("%s:%s", endpoint.getConfiguration().getSource(), externalHostId));
         event.setObject(newObjectName);
         event.setEventsource(String.format("%s", endpoint.getConfiguration().getSource()));
         event.setSeverity(setRightSeverity(severity.toUpperCase()));
@@ -534,6 +542,43 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         logger.debug("**** Generated event: " + event.toString());
 
         return event;
+    }
+
+    private JSONObject getHostByHostNameFromZabbix(String shortHostNameWithoutAlias) {
+        RequestBuilder getRequestBuilder;
+        Request getRequest;
+        JSONObject getResponse;
+        try {
+            JSONObject filter = new JSONObject();
+            filter.put("host", new String[]{shortHostNameWithoutAlias});
+
+            getRequestBuilder = RequestBuilder.newBuilder().method("host.get")
+                    .paramEntry("filter", filter)
+                    .paramEntry("output", new String[]{"hostid", "name", "host"});
+
+            getRequest = getRequestBuilder.build();
+
+        } catch (Exception ex) {
+            genErrorMessage("Failed create JSON request for get all Hosts.", ex);
+            throw new RuntimeException("Failed create JSON request for get all Hosts.");
+        }
+
+        JSONArray hosts;
+        try {
+            getResponse = zabbixApiFromSearchEvents.call(getRequest);
+
+            hosts = getResponse.getJSONArray("result");
+
+        } catch (Exception e) {
+            genErrorMessage("Failed get JSON response result for search Hosts.", e);
+            throw new RuntimeException("Failed get JSON response result for search Hosts.");
+        }
+
+        if (hosts == null || hosts.isEmpty())
+            return null;
+
+        return hosts.getJSONObject(0);
+
     }
 
     private HashMap<String, Object> parseXMLtoObject(String xmlmessage) {
