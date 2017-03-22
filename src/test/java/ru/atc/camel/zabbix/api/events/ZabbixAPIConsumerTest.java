@@ -40,7 +40,7 @@ public class ZabbixAPIConsumerTest {
                 "\\[(.*)\\](.*)",
                 "(.*)::(.*)",
                 "(.*)\\((.*)\\)");
-        Assert.assertThat(returnCiArray[0], CoreMatchers.is("4e64165c8c5c97dd7d12ee933779c4af047dd520"));
+        Assert.assertThat(returnCiArray[0], CoreMatchers.is("MSA2040-C2-2:EXPANDER PORT: ENCLOSURE ID 1, CONTROLLER B, PHY 22, PHY INDEX 22, TYPE DRIVE (IO ПОРТЫ)"));
 
     }
 
@@ -174,7 +174,7 @@ public class ZabbixAPIConsumerTest {
         Event eventFromJson = testCons.checkAlertInJsonAndCreateEvent(new String[]{"7", "8", "9"}, jsonEventFromZabbix);
 
         Assert.assertThat(eventFromJson.getHost(), CoreMatchers.is("MSA2040_02_C1"));
-        Assert.assertThat(eventFromJson.getCi(), CoreMatchers.is("Zabbix:7e408e52519d3c323dfbf95c2b8e5947aeb79b02"));
+        Assert.assertThat(eventFromJson.getCi(), CoreMatchers.is("Zabbix:MSA2040_02_C1:КОНТРОЛЛЕР A (КОНТРОЛЛЕРЫ)"));
         Assert.assertThat(eventFromJson.getOrigin(), CoreMatchers.is("MSA2040_02_C1"));
         Assert.assertThat(eventFromJson.getObject(), CoreMatchers.is("КОНТРОЛЛЕР A".toUpperCase()));
         Assert.assertThat(eventFromJson.getParametr(), CoreMatchers.is("53537"));
@@ -211,9 +211,46 @@ public class ZabbixAPIConsumerTest {
         Event eventFromJson = testCons.checkAlertInJsonAndCreateEvent(new String[]{"7", "8", "9"}, jsonEventFromZabbix);
 
         Assert.assertThat(eventFromJson.getHost(), CoreMatchers.is("MSA2040-C2-2"));
-        Assert.assertThat(eventFromJson.getCi(), CoreMatchers.is("Zabbix:30f6579fe8c0ec17c1f8fa3237995c590b611443"));
+        Assert.assertThat(eventFromJson.getCi(), CoreMatchers.is("Zabbix:MSA2040-C2-2:EXPANDER PORT: ENCLOSURE ID 1, CONTROLLER A, PHY 0, PHY INDEX 24, TYPE SC-1 | ENC.0.24.SC-1 (IO ПОРТЫ)"));
         Assert.assertThat(eventFromJson.getOrigin(), CoreMatchers.is("MSA2040-C2-2"));
         Assert.assertThat(eventFromJson.getObject(), CoreMatchers.is("EXPANDER PORT: ENCLOSURE ID 1, CONTROLLER A, PHY 0, PHY INDEX 24, TYPE SC-1".toUpperCase()));
+        Assert.assertThat(eventFromJson.getParametr(), CoreMatchers.is("62407"));
+    }
+
+    @Test
+    public void testCiItemNaming6_1() throws Exception {
+
+        ZabbixAPIComponent zabbixAPIComponent = new ZabbixAPIComponent();
+
+        Processor processor = new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+
+            }
+        };
+
+        ZabbixAPIConsumer testCons;
+        ZabbixAPIEndpoint zabbixAPIEndpoint = new ZabbixAPIEndpoint("", "", zabbixAPIComponent);
+        ZabbixAPIConfiguration zabbixAPIConfiguration = new ZabbixAPIConfiguration();
+        zabbixAPIConfiguration.setDelay(5);
+        zabbixAPIConfiguration.setZabbixActionXmlNs("http://skuf.gosuslugi.ru/mon/");
+        zabbixAPIConfiguration.setItemCiParentPattern("(.*)::(.*)");
+        zabbixAPIConfiguration.setItemCiPattern("\\[(.*)\\](.*)");
+        zabbixAPIConfiguration.setItemCiTypePattern("(.*)\\((.*)\\)");
+        zabbixAPIConfiguration.setSource("Zabbix");
+        zabbixAPIConfiguration.setZabbixtemplatepattern(".*--(.*)--.*");
+        zabbixAPIEndpoint.setConfiguration(zabbixAPIConfiguration);
+        testCons = new ZabbixAPIConsumer(zabbixAPIEndpoint, processor);
+
+        String stringEventFromZabbix = "{\"ns\":\"870995581\",\"source\":\"0\",\"clock\":\"1498613592\",\"alerts\":[{\"message\":\":echo '<ns:zabbixEvent xmlns:ns=\\\"http://skuf.gosuslugi.ru/mon/\\\" eventid=\\\"11763576\\\"><ns:date>2016.05.30</ns:date><ns:time>16:06:32</ns:time><ns:host>172.20.14.135</ns:host><ns:triggername><![CDATA[Изменился статус модуля mgmt-module-a]]></ns:triggername><ns:triggerid>58835</ns:triggerid><ns:status>PROBLEM</ns:status><ns:itemid>230389</ns:itemid><ns:value><![CDATA[OK (1)]]></ns:value><ns:itemkey><![CDATA[vplex.stat.module.operational-status[/engines/engine-1-1/mgmt-modules/mgmt-module-a]]]></ns:itemkey><ns:itemkeyorig><![CDATA[vplex.stat.module.operational-status[/engines/engine-1-1/mgmt-modules/mgmt-module-a]]]></ns:itemkeyorig><ns:itemname><![CDATA[[engine-1-1 (Шасси Vplex)::mgmt-module-a (Модули Vplex)] Operational Status]]></ns:itemname><ns:itemnameorig><![CDATA[[[engine-1-1 (Шасси Vplex)::mgmt-module-a (Модули Vplex)] Operational Status]]></ns:itemnameorig><ns:severity>High</ns:severity><ns:triggerurl></ns:triggerurl><ns:proxyname>Proxy: </ns:proxyname><ns:hostgroup>VPLEX, (Невский.СВС)Прочее </ns:hostgroup><ns:template>*UNKNOWN* </ns:template><ns:metadescription><![CDATA[last()}<>1]]></ns:metadescription><ns:alias>{$MC_SMC_ALIAS}</ns:alias></ns:zabbixEvent>' > '/dev/null'\",\"actionid\":\"7\",\"alertid\":\"556901\",\"mediatypes\":[],\"eventid\":\"11763576\"}],\"acknowledged\":\"0\",\"hosts\":[{\"host\":\"172.20.14.135\",\"hostid\":\"12081\",\"name\":\"172.20.14.135\"}],\"value\":\"1\",\"object\":\"0\",\"objectid\":\"62407\",\"eventid\":\"11763576\",\"relatedObject\":{\"triggerid\":\"58835\",\"status\":\"0\",\"priority\":\"4\",\"description\":\"Изменился Health-статус IO-порта Enclosure ID 1, Controller A, Phy 0, PHY index 24, Type SC-1\",\"value\":\"1\"}}";
+        JSONObject jsonEventFromZabbix = (JSONObject) JSON.parse(stringEventFromZabbix);
+
+        Event eventFromJson = testCons.checkAlertInJsonAndCreateEvent(new String[]{"7", "8", "9"}, jsonEventFromZabbix);
+
+        Assert.assertThat(eventFromJson.getHost(), CoreMatchers.is("172.20.14.135"));
+        Assert.assertThat(eventFromJson.getCi(), CoreMatchers.is("Zabbix:172.20.14.135:MGMT-MODULE-A (МОДУЛИ VPLEX)"));
+        Assert.assertThat(eventFromJson.getOrigin(), CoreMatchers.is("172.20.14.135"));
+        Assert.assertThat(eventFromJson.getObject(), CoreMatchers.is("mgmt-module-a".toUpperCase()));
         Assert.assertThat(eventFromJson.getParametr(), CoreMatchers.is("62407"));
     }
 

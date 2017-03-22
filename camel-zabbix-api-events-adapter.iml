@@ -22,8 +22,8 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Maven: ru.atc.monitoring:zabbix-api:1.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: ru.atc.zabbix.general:ciitem-api:1.1.9" level="project" />
-    <orderEntry type="library" name="Maven: ru.atc.adapters.general:message-api:1.2.3" level="project" />
+    <orderEntry type="library" name="Maven: ru.atc.zabbix.general:ciitem-api:1.1.11" level="project" />
+    <orderEntry type="library" name="Maven: ru.atc.adapters.general:message-api:1.2.4" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-configuration2:2.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-lang3:3.3.2" level="project" />
     <orderEntry type="library" name="Maven: commons-logging:commons-logging:1.2" level="project" />
