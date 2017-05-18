@@ -343,10 +343,14 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
             logger.debug("*** Received JSON Event: " + event.toString());
 
-            Event eventFromJson = checkAlertInJsonAndCreateEvent(systemActionIDs, event);
-            // Add generated event to list
-            if (eventFromJson != null)
-                eventsList.add(eventFromJson);
+            try {
+                Event eventFromJson = checkAlertInJsonAndCreateEvent(systemActionIDs, event);
+                // Add generated event to list
+                if (eventFromJson != null)
+                    eventsList.add(eventFromJson);
+            } catch (Exception e) {
+                genErrorMessage("Failed parse and sending event", e);
+            }
 
         }
 
@@ -414,9 +418,21 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             if (alertresult != null) {
                 logger.debug("**** Received well-formatted message.  ");
                 logger.debug("**** Trying to generate event for it...  ");
-                String hostHost = event.getJSONArray("hosts").getJSONObject(0).getString("host");
-                String hostName = event.getJSONArray("hosts").getJSONObject(0).getString("name");
-                String hostId = event.getJSONArray("hosts").getJSONObject(0).getString("hostid");
+                String hostHost = null;
+                String hostName = null;
+                String hostId = null;
+                try {
+                    hostHost = event.getJSONArray("hosts").getJSONObject(0).getString("host");
+                    hostName = event.getJSONArray("hosts").getJSONObject(0).getString("name");
+                    hostId = event.getJSONArray("hosts").getJSONObject(0).getString("hostid");
+                } catch (Exception e) {
+                    hostHost = alertresult.get("hostname").toString();
+                    JSONObject jsonHost = getHostByHostNameFromZabbix(hostHost);
+                    if (jsonHost != null) {
+                        hostId = jsonHost.getString("hostid");
+                        hostName = jsonHost.getString("name");
+                    }
+                }
                 String objectId = event.getString("objectid");
                 String eventId = event.getString("eventid");
                 String status = event.getString("value");
@@ -590,7 +606,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
         DocumentBuilderFactory domFactory = DocumentBuilderFactory
                 .newInstance();
-        domFactory.setNamespaceAware(true);
+        domFactory.setNamespaceAware(false);
         DocumentBuilder builder;
         try {
             builder = domFactory.newDocumentBuilder();
@@ -635,15 +651,18 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         try {
             XPathExpression expr;
             Object result;
+            NodeList result1;
 
             logger.debug("[XML PARSING] getNamespaceURI: " + xpath.getNamespaceContext().getNamespaceURI("ns"));
             HashMap<String, Object> alertreturn = new HashMap<>(6);
 
             // <ns:severity>Information</ns:severity>
             logger.debug("[XML PARSING] try to get Severity...");
-            expr = xpath.compile("/ns:zabbixEvent/ns:severity");
+            //expr = xpath.compile("/ns:zabbixEvent/ns:severity");
+            expr = xpath.compile("/*[local-name() = 'zabbixEvent']/*[local-name() = 'severity']");
             result = expr.evaluate(doc, XPathConstants.NODESET);
-            String severity = ((NodeList) result).item(0).getTextContent();
+            result1 = (NodeList) result;
+            String severity = result1.item(0).getTextContent();
             logger.debug("*** Received XML severity : " + severity);
             alertreturn.put("severity", severity);
 
@@ -652,55 +671,80 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             No errors detected. System software OK..Action: No ]]>
             </ns:value> */
             logger.debug("[XML PARSING] try to get Value...");
-            expr = xpath.compile("/ns:zabbixEvent/ns:value");
+//            expr = xpath.compile("/ns:zabbixEvent/ns:value");
+            expr = xpath.compile("/*[local-name() = 'zabbixEvent']/*[local-name() = 'value']");
+
             result = expr.evaluate(doc, XPathConstants.NODESET);
-            String value = ((NodeList) result).item(0).getTextContent();
+            result1 = (NodeList) result;
+            String value = result1.item(0).getTextContent();
             logger.debug("*** Received XML value : " + value);
             alertreturn.put("value", value);
 
             // <ns:hostgroup>АТС </ns:hostgroup>
             logger.debug("[XML PARSING] try to get Hostgroup...");
-            expr = xpath.compile("/ns:zabbixEvent/ns:hostgroup");
+//            expr = xpath.compile("/ns:zabbixEvent/ns:hostgroup");
+            expr = xpath.compile("/*[local-name() = 'zabbixEvent']/*[local-name() = 'hostgroup']");
+
             result = expr.evaluate(doc, XPathConstants.NODESET);
-            String hostgroup = ((NodeList) result).item(0).getTextContent();
+            result1 = (NodeList) result;
+            String hostgroup = result1.item(0).getTextContent();
             logger.debug("*** Received XML hostgroup : " + hostgroup);
             alertreturn.put("hostgroup", hostgroup);
 
             // <ns:template>SNMP Traps Nortel </ns:template>
             logger.debug("[XML PARSING] try to get Template...");
-            expr = xpath.compile("/ns:zabbixEvent/ns:template");
+//            expr = xpath.compile("/ns:zabbixEvent/ns:template");
+            expr = xpath.compile("/*[local-name() = 'zabbixEvent']/*[local-name() = 'template']");
             result = expr.evaluate(doc, XPathConstants.NODESET);
-            String template = ((NodeList) result).item(0).getTextContent();
+            result1 = (NodeList) result;
+            String template = result1.item(0).getTextContent();
             logger.debug("*** Received XML template : " + template);
             alertreturn.put("template", template);
 
             // <ns:triggername><![CDATA[SNMP Info trap]]></ns:triggername>
             logger.debug("[XML PARSING] try to get Triggername...");
-            expr = xpath.compile("/ns:zabbixEvent/ns:triggername");
+//            expr = xpath.compile("/ns:zabbixEvent/ns:triggername");
+            expr = xpath.compile("/*[local-name() = 'zabbixEvent']/*[local-name() = 'triggername']");
             result = expr.evaluate(doc, XPathConstants.NODESET);
-            String triggername = ((NodeList) result).item(0).getTextContent();
+            result1 = (NodeList) result;
+            String triggername = result1.item(0).getTextContent();
             logger.debug("*** Received XML triggername : " + triggername);
             alertreturn.put("triggername", triggername);
 
             // <ns:itemid>23876</ns:itemid>
             logger.debug("[XML PARSING] try to get Itemid...");
-            expr = xpath.compile("/ns:zabbixEvent/ns:itemid");
+//            expr = xpath.compile("/ns:zabbixEvent/ns:itemid");
+            expr = xpath.compile("/*[local-name() = 'zabbixEvent']/*[local-name() = 'itemid']");
             result = expr.evaluate(doc, XPathConstants.NODESET);
-            String itemid = ((NodeList) result).item(0).getTextContent();
+            result1 = (NodeList) result;
+            String itemid = result1.item(0).getTextContent();
             logger.debug("*** Received XML itemid : " + itemid);
             alertreturn.put("itemid", itemid);
 
             // <ns:itemname><![CDATA[SNMP Trap SEVERITY=Info]]>
             logger.debug("[XML PARSING] try to get Itemname...");
-            expr = xpath.compile("/ns:zabbixEvent/ns:itemname");
+//            expr = xpath.compile("/ns:zabbixEvent/ns:itemname");
+            expr = xpath.compile("/*[local-name() = 'zabbixEvent']/*[local-name() = 'itemname']");
+
             result = expr.evaluate(doc, XPathConstants.NODESET);
-            String itemname = ((NodeList) result).item(0).getTextContent();
+            result1 = (NodeList) result;
+            String itemname = result1.item(0).getTextContent();
             logger.debug("*** Received XML itemname : " + itemname);
             alertreturn.put("itemname", itemname);
 
+            logger.debug("[XML PARSING] try to get Hostname...");
+//            expr = xpath.compile("/ns:zabbixEvent/ns:host");
+            expr = xpath.compile("/*[local-name() = 'zabbixEvent']/*[local-name() = 'host']");
+
+            result = expr.evaluate(doc, XPathConstants.NODESET);
+            result1 = (NodeList) result;
+            String hostname = result1.item(0).getTextContent();
+            logger.debug("*** Received XML hostname : " + hostname);
+            alertreturn.put("hostname", hostname);
+
             return alertreturn;
 
-        } catch (XPathExpressionException | DOMException e) {
+        } catch (XPathExpressionException | DOMException | NullPointerException e) {
             genErrorMessage("Error while get elements from XML string", e);
             return null;
         }
@@ -799,7 +843,7 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
                 logger.debug("*** Received JSON EventID: " + eventid);
                 logger.debug("*** Received JSON Event Value: " + status);
             } catch (Exception e) {
-                genErrorMessage("Error while get 'lastEvent' attributes from JSONObject", e);
+                //genErrorMessage("Error while get 'lastEvent' attributes from JSONObject", e);
                 logger.debug("*** No event for trigger: " + triggerid);
             }
 

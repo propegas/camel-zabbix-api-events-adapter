@@ -103,7 +103,6 @@ public final class Main {
                     .to("activemq:{{heartbeatsqueue}}")
                     .log("*** Heartbeat: ${id}")
                     .log(LoggingLevel.DEBUG, logger, "***HEARTBEAT BODY: ${in.body}");
-
             from(new StringBuilder().append("zabbixapi://events?")
                     .append("delay={{delay}}&")
                     .append("zabbixapiurl={{zabbixapiurl}}&")
@@ -137,12 +136,20 @@ public final class Main {
                             FileIdempotentRepository.fileIdempotentRepository(
                                     cachefile, CACHE_SIZE, MAX_FILE_SIZE
                             )
-                    )
+                    ).skipDuplicate(false)
 
                     .marshal(myJson)
-                    .to("activemq:{{eventsqueue}}")
+
+                    .filter(exchangeProperty(Exchange.DUPLICATE_MESSAGE).isEqualTo(true))
+                    .log("*** REPEATED EVENT: ${id} ${header.EventUniqueId}")
+                    .log(LoggingLevel.DEBUG, logger, "*** REPEATED EVENT BODY: ${in.body}")
+                    .stop()
+                    .end()
+
                     .log("*** NEW EVENT: ${id} ${header.EventUniqueId}")
-                    .log(LoggingLevel.DEBUG, logger, "*** NEW EVENT BODY: ${in.body}");
+                    .log(LoggingLevel.DEBUG, logger, "*** NEW EVENT BODY: ${in.body}")
+                    .to("activemq:{{eventsqueue}}");
+
         }
     }
 }
