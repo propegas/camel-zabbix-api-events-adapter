@@ -62,12 +62,12 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
     private static final int MAX_CONN_TOTAL = 40;
     private static final int CONNECTION_TIME_TO_LIVE = 120;
 
-    private static final Logger logger = LoggerFactory.getLogger("mainLogger");
     private static final Logger loggerErrors = LoggerFactory.getLogger("errorsLogger");
-
+    private static final Logger logger = LoggerFactory.getLogger("mainLogger");
     private static ZabbixAPIEndpoint endpoint;
-
     private DefaultZabbixApi zabbixApiFromSearchEvents;
+    private boolean justStarted = true;
+    private int cycleCount;
 
     public ZabbixAPIConsumer(ZabbixAPIEndpoint endpoint, Processor processor) {
         super(endpoint, processor);
@@ -107,17 +107,32 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
 
     private int processSearchEvents() {
 
+        cycleCount++;
+
         List<Event> openEventsList;
         List<Event> allEventsList = new ArrayList<>();
 
         logger.info("Try to get Events.");
 
+        int lastEventIdFromConfig = Integer.parseInt(endpoint.getConfiguration().getLasteventid());
+
         DefaultZabbixApi zabbixApi = null;
-        int lastEventId = Integer.parseInt(endpoint.getConfiguration().getLasteventid());
+        int lastEventId = 0;
+        if (!justStarted)
+            lastEventId = Integer.parseInt(endpoint.getConfiguration().getLasteventid());
+        else
+            logger.info("**** Цикл получения всех открытых событий!");
+
+        if (cycleCount < 12 * 60 / this.getDelay())
+            justStarted = false;
+        else {
+            justStarted = true;
+            cycleCount = 0;
+        }
 
         try {
 
-            // inid zabbix api object and login to zabbix server
+            // init zabbix api object and login to zabbix server
             zabbixApi = initZabbixApi();
 
             zabbixApiFromSearchEvents = zabbixApi;
@@ -130,6 +145,16 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
             // add events to main global array of events
             if (openEventsList != null)
                 allEventsList.addAll(openEventsList);
+
+            if (lastEventId != lastEventIdFromConfig) {
+                logger.debug("Last Event ID from config: " + lastEventId);
+                // lastid = 0 (first execution)
+
+                openEventsList = getLastEventsFromApi(zabbixApi, lastEventIdFromConfig);
+                // add events to main global array of events
+                if (openEventsList != null)
+                    allEventsList.addAll(openEventsList);
+            }
 
             processEventsToExchange(allEventsList);
 
