@@ -40,6 +40,8 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -65,6 +67,19 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
     private static final Logger loggerErrors = LoggerFactory.getLogger("errorsLogger");
     private static final Logger logger = LoggerFactory.getLogger("mainLogger");
     private static ZabbixAPIEndpoint endpoint;
+    private static Comparator<Event> EventDateComparator = new Comparator<Event>() {
+        @Override
+        public int compare(Event s1, Event s2) {
+            Long eventDate1 = s1.getTimestamp();
+            Long eventDate2 = s2.getTimestamp();
+
+            //ascending order
+            return eventDate1.compareTo(eventDate2);
+
+            //descending order
+            //return eventDate2.compareTo(eventDate1);
+        }
+    };
     private DefaultZabbixApi zabbixApiFromSearchEvents;
     private boolean justStarted = true;
     private int cycleCount;
@@ -262,6 +277,9 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
     }
 
     private void processEventsToExchange(List<Event> allEventsList) {
+
+        Collections.sort(allEventsList, EventDateComparator);
+
         for (Event aListFinal : allEventsList) {
             logger.info("Create Exchange container");
 
@@ -955,5 +973,4 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         logger.debug("***************** newstatus: " + newstatus);
         return newstatus;
     }
-
 }
