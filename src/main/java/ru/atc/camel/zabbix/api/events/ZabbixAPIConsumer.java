@@ -950,11 +950,11 @@ public class ZabbixAPIConsumer extends ScheduledPollConsumer {
         String newstatus;
         /*
          *
-* State of the related object.
+         * State of the related object.
 
-* Possible values for trigger events:
-* 0 : OK;
-* 1 : problem.
+         * Possible values for trigger events:
+         * 0 : OK;
+         * 1 : problem.
          */
 
         switch (status) {

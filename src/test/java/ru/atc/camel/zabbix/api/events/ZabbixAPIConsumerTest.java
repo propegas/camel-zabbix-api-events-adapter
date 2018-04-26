@@ -45,6 +45,31 @@ public class ZabbixAPIConsumerTest {
     }
 
     @Test
+    public void testCiItemNamingWeb() throws Exception {
+
+        String itemname = "Response code for step \"[Интеграция МЭДО(BusinessFunction)] Проверка\" of scenario \"[Интеграция МЭДО(BusinessFunction)] Проверка\"";
+        String hostid = "10267";
+        String hostHost = "CM-PG-node-01.nso.loc";
+        String hostName = "CM-PG-node-01.nso.loc";
+        String newhostname = checkHostPattern(hostHost, hostName);
+
+        if (newhostname == null) {
+            newhostname = hostHost;
+            // Use hostid (as ciid) of hostHost
+            //ciId = hostid;
+        } else {
+            newhostname = checkHostAliases(null, hostHost, hostName)[1];
+        }
+
+        String[] returnCiArray = checkItemForCi(itemname, hostid, newhostname,
+                "\\[(.*)\\](.*)",
+                "(.*)::(.*)",
+                "(.*)\\((.*)\\)");
+        Assert.assertThat(returnCiArray[0], CoreMatchers.is("CM-PG-node-01.nso.loc:ИНТЕГРАЦИЯ МЭДО(BUSINESSFUNCTION)"));
+
+    }
+
+    @Test
     public void testCiItemNaming2() throws Exception {
 
         String itemname = "Status";

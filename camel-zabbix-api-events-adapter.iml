@@ -16,13 +16,15 @@
       <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/.idea/libraries" />
+      <excludeFolder url="file://$MODULE_DIR$/.settings" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Maven: ru.atc.monitoring:zabbix-api:1.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: ru.atc.zabbix.general:ciitem-api:1.1.11" level="project" />
+    <orderEntry type="library" name="Maven: ru.atc.zabbix.general:ciitem-api:1.1.13" level="project" />
     <orderEntry type="library" name="Maven: ru.atc.adapters.general:message-api:1.2.4" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-configuration2:2.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-lang3:3.3.2" level="project" />
